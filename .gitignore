@@ -1,3 +1,13 @@
 venv/*
 .env
 serviceAccountKey.json
+google_oauth_client_secret_950460253205-m391prh94or47nl79193n79ni2njrff3.apps.googleusercontent.com.json
+settings.json
+# Ignore Python cache files
+__pycache__/
+*.pyc
+.pytest_cache/
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+# Ignore logs
+logs/
