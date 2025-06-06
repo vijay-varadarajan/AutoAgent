@@ -1,8 +1,9 @@
 import os
 import requests
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from app.config import TELEGRAM_BOT_API_KEY, GOOGLE_CLIENT_ID
+from app.services.firestore_db import get_google_tokens
 
 BACKEND_URL = "http://localhost:8000/api/workflow/parse-and-save"  # Change if deployed
 
@@ -46,9 +47,19 @@ def get_google_auth_url(user_id):
 async def connect_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     print(f"User {user_id} requested calendar connection")
+    tokens = get_google_tokens(user_id)
+    print(f"Retrieved tokens for user {user_id}: {tokens}")
+    if tokens:
+        await update.message.reply_text("Your Google Calendar is already connected!")
+        return
     auth_url = get_google_auth_url(user_id)
+    keyboard = [
+        [InlineKeyboardButton("Connect Google Calendar", url=auth_url)]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"To connect your Google Calendar, please click this link and authorize access:\n{auth_url}"
+        "To connect your Google Calendar, please click the button below and authorize access:",
+        reply_markup=reply_markup
     )
     
 

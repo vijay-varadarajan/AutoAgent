@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 import requests
 import os
 from app.config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+from app.services.firestore_db import save_google_tokens
 
 router = APIRouter()
 
@@ -28,6 +29,9 @@ async def oauth_callback(request: Request):
         return {"error": "Failed to get token", "details": resp.text}
     tokens = resp.json()
 
+    print(f"Received tokens for user {state}: {tokens}")
     # You can store tokens here, e.g., in Firestore, using 'state' as the user_id
+    save_google_tokens(state, tokens)
+    print(f"Tokens saved for user {state}")
 
     return {"status": "success", "tokens": tokens}
