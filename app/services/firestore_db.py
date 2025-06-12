@@ -24,6 +24,10 @@ def save_google_tokens(user_id: str, tokens: dict):
     Save Google OAuth tokens for a user.
     """
     doc_ref = db.collection(GOOGLE_TOKENS_COLLECTION).document(user_id)
+    
+    if "scope" in tokens and isinstance(tokens["scope"], str):
+        tokens["scope"] = tokens["scope"].split()
+    
     doc_ref.set(tokens)
 
 def get_google_tokens(user_id: str):

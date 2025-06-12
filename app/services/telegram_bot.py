@@ -1,7 +1,7 @@
 import os
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 from app.config import TELEGRAM_BOT_API_KEY, GOOGLE_CLIENT_ID
 from app.services.firestore_db import get_google_tokens
 
@@ -37,35 +37,45 @@ def get_google_auth_url(user_id):
         "client_id": GOOGLE_CLIENT_ID,
         "redirect_uri": REDIRECT_URI,
         "response_type": "code",
-        "scope": "https://www.googleapis.com/auth/calendar",
+        "scope": " ".join([
+            "https://www.googleapis.com/auth/calendar",
+            "https://mail.google.com/",
+            "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/photoslibrary",
+            "https://www.googleapis.com/auth/meetings.space.created",
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/documents",
+            "https://www.googleapis.com/auth/presentations",
+        ]),
         "access_type": "offline",
-        "state": user_id,  # To identify the user later
-        "prompt": "consent"
+        "state": user_id,
+        "prompt": "consent",
     }
     return f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
 
-async def connect_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def connect(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     print(f"User {user_id} requested calendar connection")
     tokens = get_google_tokens(user_id)
     print(f"Retrieved tokens for user {user_id}: {tokens}")
     if tokens:
-        await update.message.reply_text("Your Google Calendar is already connected!")
+        await update.message.reply_text("Your Google services are already connected!")
         return
     auth_url = get_google_auth_url(user_id)
     keyboard = [
-        [InlineKeyboardButton("Connect Google Calendar", url=auth_url)]
+        [InlineKeyboardButton("Connect Google services", url=auth_url)]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "To connect your Google Calendar, please click the button below and authorize access:",
+        "To connect your Google services, please click the button below and authorize access:",
         reply_markup=reply_markup
     )
     
 
 def run_bot():
     app = ApplicationBuilder().token(TELEGRAM_BOT_API_KEY).build()
-    app.add_handler(CommandHandler("do", do_command))
-    app.add_handler(CommandHandler("connect_calendar", connect_calendar))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, do_command))  # Add this line
+    app.add_handler(CommandHandler("connect", connect))
     print("Bot running...")
     app.run_polling()
