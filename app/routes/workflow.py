@@ -10,7 +10,8 @@ async def parse_and_save(req: WorkflowRequest):
     try:
         structured_output = await parse_workflow(req.prompt)
         workflow_id = save_workflow(req.user_id, req.prompt, structured_output)
-        return {"status": "saved", "workflow_id": workflow_id}
+        # Return the parsed workflow as well for downstream logic
+        return {"status": "saved", "workflow_id": workflow_id, "workflow": structured_output}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
