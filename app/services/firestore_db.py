@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Dict, List, Optional, Any
+import base64
 
 from app.config import db
 
@@ -57,3 +58,15 @@ def get_google_tokens(user_id: str) -> Optional[Dict[str, Any]]:
     """Retrieve Google OAuth tokens for a user."""
     doc = db.collection(GOOGLE_TOKENS_COLLECTION).document(user_id).get()
     return doc.to_dict() if doc.exists else None
+
+
+def save_photo(user_id: str, photo_bytes: bytes, file_id: str) -> str:
+    """Save a photo to Firestore as base64-encoded string. Returns the document ID."""
+    doc_ref = db.collection("photos").document()
+    doc_ref.set({
+        "user_id": user_id,
+        "file_id": file_id,
+        "photo_data": base64.b64encode(photo_bytes).decode('utf-8'),
+        "timestamp": datetime.utcnow()
+    })
+    return doc_ref.id

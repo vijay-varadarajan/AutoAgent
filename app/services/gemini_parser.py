@@ -17,7 +17,7 @@ async def parse_workflow(prompt: str) -> dict:
     {{
         "frequency": "daily",
         "time": "9:00 AM",
-        "tasks": [
+        "tasks": [  
             {{"action": "email", "recipient": "me"}},
             {{"action": "calendar_event", "title": "Team Meeting"}},
             {{"action": "drive_upload", "file": "report.pdf"}},

@@ -8,7 +8,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 from app.config import TELEGRAM_BOT_API_KEY, GOOGLE_CLIENT_ID
-from app.services.firestore_db import get_google_tokens
+from app.services.firestore_db import get_google_tokens, save_photo
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -164,10 +164,24 @@ async def handle_backend_response(update: Update, user_id: str, response: reques
 
 
 async def do_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle user commands and process workflows."""
+    """Handle user commands and process workflows. Also handle photo uploads."""
     user_id = str(update.effective_user.id)
     prompt = update.message.text.strip() if update.message and update.message.text else ""
-    
+
+    # Handle photo upload if present
+    if update.message and update.message.photo:
+        # Get the highest resolution photo
+        photo = update.message.photo[-1]
+        file_id = photo.file_id
+        new_file = await context.bot.get_file(file_id)
+        photo_bytes = await new_file.download_as_bytearray()
+        # Save photo to Firestore
+        save_photo(user_id, photo_bytes, file_id)
+        await update.message.reply_text("Photo uploaded and saved to Firestore!")
+        # Optionally, continue to process the prompt if present
+        if not prompt:
+            return
+
     if not prompt:
         await update.message.reply_text("Please provide an action, e.g. 'summarize news'")
         return
