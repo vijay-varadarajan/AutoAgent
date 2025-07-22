@@ -38,6 +38,9 @@ jsonpointer==3.0.0
 langchain==0.3.25
 langchain-core==0.3.61
 langchain-text-splitters==0.3.8
+langchain-community==0.3.24
+langchain-google-community==2.0.16
+langgraph==0.2.54
 langsmith==0.3.42
 msgpack==1.1.0
 orjson==3.10.18
