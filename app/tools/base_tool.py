@@ -21,37 +21,29 @@ class BaseGoogleTool(BaseTool):
     required_scopes: ClassVar[List[str]] = []
     
     def __init__(self, user_id: str, **kwargs):
+        print(f"Executing function __init__ from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\base_tool.py:23")
         super().__init__(user_id=user_id, **kwargs)
-        logger.info(f"🔧 BASE TOOL: Initializing {self.__class__.__name__} for user {user_id}")
-        logger.info(f"🔧 BASE TOOL: Required scopes: {self.required_scopes}")
     
     def get_credentials(self) -> Optional[Credentials]:
         """Retrieve and refresh Google OAuth credentials for the user."""
-        logger.info(f"🔧 BASE TOOL: Getting credentials for user {self.user_id}")
+        print(f"Executing function get_credentials from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\base_tool.py:28")
         try:
             # Get tokens from Firebase
             token_data = get_google_tokens(self.user_id)
             if not token_data:
-                logger.error(f"🔧 BASE TOOL: ❌ No Google tokens found for user {self.user_id}")
+                logger.error(f"No Google tokens found for user {self.user_id}")
                 return None
-            
-            logger.info(f"🔧 BASE TOOL: ✅ Found token data for user {self.user_id}")
             
             # Check if required scopes are granted
             granted_scopes = set(token_data.get('scope', []))
             required_scopes = set(self.required_scopes)
-            logger.info(f"🔧 BASE TOOL: Checking scopes - Required: {required_scopes}")
-            logger.info(f"🔧 BASE TOOL: Checking scopes - Granted: {granted_scopes}")
             
             if not required_scopes.issubset(granted_scopes):
                 missing_scopes = required_scopes - granted_scopes
-                logger.error(f"🔧 BASE TOOL: ❌ Missing required scopes for user {self.user_id}: {missing_scopes}")
+                logger.error(f"Missing required scopes for user {self.user_id}: {missing_scopes}")
                 return None
             
-            logger.info(f"🔧 BASE TOOL: ✅ All required scopes granted for user {self.user_id}")
-            
             # Create credentials object
-            logger.info(f"🔧 BASE TOOL: Creating credentials object...")
             credentials = Credentials(
                 token=token_data.get('access_token'),
                 refresh_token=token_data.get('refresh_token'),
@@ -63,7 +55,6 @@ class BaseGoogleTool(BaseTool):
             
             # Refresh if expired
             if credentials.expired and credentials.refresh_token:
-                logger.info(f"🔧 BASE TOOL: Credentials expired, refreshing for user {self.user_id}")
                 try:
                     credentials.refresh(Request())
                     
@@ -74,22 +65,34 @@ class BaseGoogleTool(BaseTool):
                         'expires_in': 3600,  # Default expiry
                     })
                     save_google_tokens(self.user_id, updated_tokens)
-                    logger.info(f"🔧 BASE TOOL: ✅ Refreshed credentials for user {self.user_id}")
                     
                 except Exception as e:
-                    logger.error(f"🔧 BASE TOOL: ❌ Failed to refresh credentials for user {self.user_id}: {e}")
+                    logger.error(f"Failed to refresh credentials for user {self.user_id}: {e}")
                     return None
-            else:
-                logger.info(f"🔧 BASE TOOL: Credentials are valid for user {self.user_id}")
             
             return credentials
             
         except Exception as e:
-            logger.error(f"🔧 BASE TOOL: ❌ Error getting credentials for user {self.user_id}: {e}")
+            logger.error(f"Error getting credentials for user {self.user_id}: {e}")
             return None
     
     def handle_api_error(self, error: Exception, operation: str) -> str:
         """Standard error handling for API calls."""
-        error_msg = f"Error in {operation}: {str(error)}"
-        logger.error(f"User {self.user_id} - {error_msg}")
-        return error_msg
+        print(f"Executing function handle_api_error from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\base_tool.py:91")
+        
+        error_msg = str(error)
+        
+        # Check for scope-related errors
+        if "invalid_scope" in error_msg or "insufficient permission" in error_msg:
+            logger.error(f"User {self.user_id} - Scope error in {operation}: {error_msg}")
+            return f"❌ Permission error: You need to re-authorize Google access for {operation}. Please use /connect command."
+        
+        # Check for authentication errors  
+        elif "invalid_grant" in error_msg or "401" in error_msg:
+            logger.error(f"User {self.user_id} - Auth error in {operation}: {error_msg}")
+            return f"❌ Authentication expired: Please use /connect command to re-authorize Google access."
+        
+        # General error
+        else:
+            logger.error(f"User {self.user_id} - Error in {operation}: {error_msg}")
+            return f"❌ Error in {operation}: {error_msg}"

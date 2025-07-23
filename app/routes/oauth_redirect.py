@@ -49,7 +49,7 @@ async def oauth_callback(request: Request):
             workflow_id = latest_workflow.get('workflow_id') or latest_workflow.get('id')
             
             if workflow_id:
-                logger.info(f"Triggering background execution of workflow {workflow_id}")
+                logger.info(f"Triggering execution of workflow {workflow_id}")
                 
                 # Create executor without telegram_update (will use background messaging)
                 executor = EnhancedWorkflowExecutor(workflow_id, telegram_update=None)

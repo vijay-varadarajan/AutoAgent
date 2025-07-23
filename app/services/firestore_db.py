@@ -192,6 +192,11 @@ def get_google_tokens(user_id: str) -> Optional[Dict[str, Any]]:
     doc = db.collection(GOOGLE_TOKENS_COLLECTION).document(user_id).get()
     return doc.to_dict() if doc.exists else None
 
+def clear_google_tokens(user_id: str) -> None:
+    """Clear Google OAuth tokens for a user."""
+    doc_ref = db.collection(GOOGLE_TOKENS_COLLECTION).document(user_id)
+    doc_ref.delete()
+
 
 def save_photo(user_id: str, photo_bytes: bytes, file_id: str) -> str:
     """Save a photo to Firestore as base64-encoded string. Returns the document ID."""

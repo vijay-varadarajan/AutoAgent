@@ -9,7 +9,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 from app.config import TELEGRAM_BOT_API_KEY, GOOGLE_CLIENT_ID
-from app.services.firestore_db import get_google_tokens, save_photo, save_user_chat_info
+from app.services.firestore_db import get_google_tokens, save_photo, save_user_chat_info, clear_google_tokens
 from app.services.enhanced_workflow_executor import EnhancedWorkflowExecutor
 from app.logging_config import setup_logging  # Import centralized logging
 
@@ -25,7 +25,9 @@ thinking_messages = {}
 
 # Google OAuth scope mappings
 GOOGLE_ACTION_SCOPES = {
-    "email": "https://www.googleapis.com/auth/gmail.send",
+    "email_send": "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose",
+    "email_read": "https://www.googleapis.com/auth/gmail.readonly",
+    "email": "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify"
     # "calendar": "https://www.googleapis.com/auth/calendar",
     # "drive": "https://www.googleapis.com/auth/drive",
     # "photos": "https://www.googleapis.com/auth/photoslibrary",
@@ -50,13 +52,12 @@ ACTION_SCOPE_MAP = {
 
 async def send_thinking_message(update: Update, message: str) -> int:
     """Send a thinking message in italics and return message ID."""
-    logger.info(f"📱 TELEGRAM BOT: Sending thinking message: {message}")
+    print(f"Executing function send_thinking_message from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:44")
     try:
         sent_message = await update.message.reply_text(
             f"_{message}_",
             parse_mode='Markdown'
         )
-        logger.info(f"📱 TELEGRAM BOT: ✅ Thinking message sent with ID: {sent_message.message_id}")
         return sent_message.message_id
     except Exception as e:
         logger.error(f"📱 TELEGRAM BOT: ❌ Error sending thinking message: {e}")
@@ -65,7 +66,7 @@ async def send_thinking_message(update: Update, message: str) -> int:
 
 async def edit_thinking_message(update: Update, message_id: int, new_message: str):
     """Edit an existing thinking message."""
-    logger.info(f"📱 TELEGRAM BOT: Editing thinking message {message_id}: {new_message}")
+    print(f"Executing function edit_thinking_message from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:57")
     try:
         await update.get_bot().edit_message_text(
             chat_id=update.effective_chat.id,
@@ -73,26 +74,25 @@ async def edit_thinking_message(update: Update, message_id: int, new_message: st
             text=f"_{new_message}_",
             parse_mode='Markdown'
         )
-        logger.info(f"📱 TELEGRAM BOT: ✅ Thinking message {message_id} edited successfully")
     except Exception as e:
         logger.error(f"📱 TELEGRAM BOT: ❌ Error editing thinking message: {e}")
 
 
 async def delete_thinking_message(update: Update, message_id: int):
     """Delete a thinking message."""
-    logger.info(f"📱 TELEGRAM BOT: Deleting thinking message {message_id}")
+    print(f"Executing function delete_thinking_message from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:70")
     try:
         await update.get_bot().delete_message(
             chat_id=update.effective_chat.id,
             message_id=message_id
         )
-        logger.info(f"📱 TELEGRAM BOT: ✅ Thinking message {message_id} deleted successfully")
     except Exception as e:
         logger.error(f"📱 TELEGRAM BOT: ❌ Error deleting thinking message: {e}")
 
 
 def get_google_auth_url(user_id: str, scopes: Optional[List[str]] = None) -> str:
     """Generate Google OAuth authorization URL."""
+    print(f"Executing function get_google_auth_url from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:90")
     if scopes is None:
         scopes = list(GOOGLE_ACTION_SCOPES.values())
     
@@ -110,6 +110,7 @@ def get_google_auth_url(user_id: str, scopes: Optional[List[str]] = None) -> str
 
 def parse_workflow_json(workflow: Any) -> Dict[str, Any]:
     """Parse workflow data, handling both string and dict formats."""
+    print(f"Executing function parse_workflow_json from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:109")
     if isinstance(workflow, dict):
         return workflow
     
@@ -132,41 +133,52 @@ def parse_workflow_json(workflow: Any) -> Dict[str, Any]:
     return {}
 
 
-def extract_required_scopes_from_workflow(workflow: Any) -> List[str]:
+def extract_required_scopes_from_workflow(workflow: Any) -> Set[str]:
     """Extract required Google OAuth scopes from workflow tasks."""
+    print(f"Executing function extract_required_scopes_from_workflow from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:94")
+    
     parsed_workflow = parse_workflow_json(workflow)
     if not parsed_workflow:
-        return []
+        return set()
     
-    scopes = set()
+    required_scopes = set()
     tasks = parsed_workflow.get("tasks", [])
     
     for task in tasks:
-        action = task.get("action", "")
-        scope_key = ACTION_SCOPE_MAP.get(action)
-        if scope_key and scope_key in GOOGLE_ACTION_SCOPES:
-            scopes.add(GOOGLE_ACTION_SCOPES[scope_key])
+        action = task.get("action")
+        mode = task.get("mode", "send")  # Default to send mode
+        
+        if action == "email":
+            if mode == "read":
+                scope_key = "email_read"
+            elif mode == "send":
+                scope_key = "email_send" 
+            else:
+                scope_key = "email"  # Fallback to all email scopes
+                
+            scope_string = GOOGLE_ACTION_SCOPES.get(scope_key, "")
+            if scope_string:
+                required_scopes.update(scope_string.split())
     
-    return list(scopes)
+    return required_scopes
 
-
-def get_missing_scopes(user_id: str, required_scopes: List[str]) -> Set[str]:
+def get_missing_scopes(user_id: str, required_scopes: Set[str]) -> Set[str]:
     """Determine which scopes are missing for a user."""
+    print(f"Executing function get_missing_scopes from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:152")
     tokens = get_google_tokens(user_id)
-    logger.info(f"Retrieved tokens for user {user_id}: {bool(tokens)}")
     
     if not tokens or 'scope' not in tokens:
         return set(required_scopes)
     
     granted_scopes = set(tokens['scope'])
     missing_scopes = set(required_scopes) - granted_scopes
-    logger.info(f"Granted scopes: {len(granted_scopes)}, Missing scopes: {len(missing_scopes)}")
     
     return missing_scopes
 
 
 async def send_auth_prompt(update: Update, user_id: str, missing_scopes: List[str]) -> None:
     """Send authorization prompt with inline keyboard."""
+    print(f"Executing function send_auth_prompt from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:164")
     auth_url = get_google_auth_url(user_id, missing_scopes)
     keyboard = [[InlineKeyboardButton("Connect Google services for this workflow", url=auth_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -179,15 +191,16 @@ async def send_auth_prompt(update: Update, user_id: str, missing_scopes: List[st
 
 async def execute_workflow_with_thinking(update: Update, workflow_id: str):
     """Execute workflow and show thinking process."""
+    print(f"Executing function execute_workflow_with_thinking from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:176")
     thinking_id = None
     
     try:
         # Send initial thinking message
-        thinking_id = await send_thinking_message(update, "🤔 Preparing to execute workflow...")
+        # thinking_id = await send_thinking_message(update, "🤔 Preparing to execute workflow...")
         
         # Store thinking message ID
         user_id = str(update.effective_user.id)
-        thinking_messages[user_id] = thinking_id
+        # thinking_messages[user_id] = thinking_id
         
         # Execute workflow
         executor = EnhancedWorkflowExecutor(workflow_id, update)
@@ -198,29 +211,35 @@ async def execute_workflow_with_thinking(update: Update, workflow_id: str):
             return
         
         # Execute workflow with thinking process
-        logger.info(f"🔧 EXECUTOR: Starting workflow execution with thinking process...")
-        success = await executor.execute_workflow()
-        logger.info(f"🔧 EXECUTOR: Workflow execution {'succeeded' if success else 'failed'}")
+        success, final_result = await executor.execute_workflow()
 
         # Create result dict for compatibility
         if success:
-            result = {"status": "completed"}
+            # If final_result is a string, try to parse it as JSON
+            if isinstance(final_result, str):
+                try:
+                    final_result = json.loads(final_result)
+                except Exception as e:
+                    logger.error(f"Failed to parse final_result as JSON: {e}")
+            result = {"status": "completed", "results": final_result}
         else:
             result = {"status": "failed", "error": "Workflow execution failed"}
         
         # Clean up thinking message
-        if thinking_id:
-            await delete_thinking_message(update, thinking_id)
+        # if thinking_id:
+        #     await delete_thinking_message(update, thinking_id)
         
         # Send final result
         if result.get("status") == "completed":
-            await update.message.reply_text("🎉 Workflow completed successfully!")
             
             # Send results summary
             results = result.get("results", {})
             if results:
-                summary = "\n".join([f"• {task}: {result}" for task, result in results.items()])
+                print(f"FINAL RESULTS: type = {type(results)} {results}")
+                for res in results['execution_results']:
+                    summary = "\n".join([f"{line}" for line in res['result'].split('\n') ])
                 await update.message.reply_text(f"📊 Results:\n{summary}")
+                
         elif result.get("status") == "failed":
             error_msg = result.get("error", "Unknown error")
             await update.message.reply_text(f"❌ Workflow failed: {error_msg}")
@@ -229,8 +248,8 @@ async def execute_workflow_with_thinking(update: Update, workflow_id: str):
             
     except Exception as e:
         logger.error(f"Error executing workflow: {e}")
-        if thinking_id:
-            await delete_thinking_message(update, thinking_id)
+        # if thinking_id:
+        #     await delete_thinking_message(update, thinking_id)
         await update.message.reply_text(f"💥 Error executing workflow: {str(e)}")
     finally:
         # Clean up thinking messages store
@@ -238,8 +257,9 @@ async def execute_workflow_with_thinking(update: Update, workflow_id: str):
         thinking_messages.pop(user_id, None)
 
 
-def validate_email_workflow(workflow: Any) -> Optional[str]:
-    """Validate email workflow has required fields. Returns error message if validation fails."""
+def validate_workflow(workflow: Any) -> Optional[str]:
+    """Validate email workflow has required fields for both read and write modes. Returns error message if validation fails."""
+    print(f"Executing function validate_workflow from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:233")
     parsed_workflow = parse_workflow_json(workflow)
     if not parsed_workflow:
         return None
@@ -250,22 +270,29 @@ def validate_email_workflow(workflow: Any) -> Optional[str]:
     # Define placeholder values that should be treated as missing
     placeholder_patterns = {
         'recipient': ['recipient@example.com', 'email@example.com', 'user@example.com', 'example@email.com'],
-        'subject': ['Subject', 'Email subject', 'Email Subject', 'subject', 'SUBJECT']
+        'subject': ['Subject', 'Email subject', 'Email Subject', 'subject', 'SUBJECT'],
+        'query': ['query', 'search query', 'Search Query', 'QUERY', 'search']
     }
     
     for i, task in enumerate(tasks):
         if task.get('action') == 'email':
             task_missing = []
+            mode = task.get('mode', 'write')  # Default to write mode for backward compatibility
             
-            # Check for recipient
-            recipient = str(task.get('recipient', '')).strip()
-            if not recipient or recipient in placeholder_patterns['recipient']:
-                task_missing.append('recipient')
-            
-            # Check for subject  
-            subject = str(task.get('subject', '')).strip()
-            if not subject or subject in placeholder_patterns['subject']:
-                task_missing.append('subject')
+            if mode == 'read':
+                # For read mode, only query is required
+                query = str(task.get('query', '')).strip()
+                if not query or query in placeholder_patterns['query']:
+                    task_missing.append('query')
+            else:
+                # For write mode (send email), recipient and subject are required
+                recipient = str(task.get('recipient', '')).strip()
+                if not recipient or recipient in placeholder_patterns['recipient']:
+                    task_missing.append('recipient')
+                
+                subject = str(task.get('subject', '')).strip()
+                if not subject or subject in placeholder_patterns['subject']:
+                    task_missing.append('subject')
             
             if task_missing:
                 missing_fields.extend(task_missing)
@@ -287,11 +314,13 @@ def validate_email_workflow(workflow: Any) -> Optional[str]:
     return None
 
 
+
 # Store for pending workflows per user (in production, use Redis or database)
 pending_workflows_by_user = {}
 
 async def handle_backend_response(update: Update, user_id: str, response: requests.Response) -> None:
     """Handle the backend API response and start workflow execution."""
+    print(f"Executing function handle_backend_response from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:301")
     try:
         data = response.json()
     except json.JSONDecodeError:
@@ -309,18 +338,15 @@ async def handle_backend_response(update: Update, user_id: str, response: reques
     workflow = data.get("workflow")
     if not workflow:
         return
-    
-    logger.info(f"Received workflow data from backend for user {user_id}")
-    
-    # Validate email workflow requirements before proceeding
-    validation_error = validate_email_workflow(workflow)
+
+    # Validate workflow requirements before proceeding
+    validation_error = validate_workflow(workflow)
     if validation_error:
-        logger.error(f"📱 TELEGRAM BOT: Email validation failed: {validation_error}")
+        logger.error(f"📱 TELEGRAM BOT: Workflow validation failed: {validation_error}")
         await update.message.reply_text(f"❌ {validation_error}")
         return
     
     required_scopes = extract_required_scopes_from_workflow(workflow)
-    logger.info(f"Required scopes: {required_scopes}")
     
     if required_scopes:
         missing_scopes = get_missing_scopes(user_id, required_scopes)
@@ -328,6 +354,7 @@ async def handle_backend_response(update: Update, user_id: str, response: reques
         if missing_scopes:
             # Store workflow ID for this user so we can execute it after OAuth
             pending_workflows_by_user[user_id] = workflow_id
+            
             await send_auth_prompt(update, user_id, list(missing_scopes))
             await update.message.reply_text("✅ After authorization, your workflow will execute automatically!")
             return
@@ -340,6 +367,7 @@ async def handle_backend_response(update: Update, user_id: str, response: reques
 
 async def do_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle user commands and process workflows. Also handle photo uploads."""
+    print(f"Executing function do_command from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:347")
     user_id = str(update.effective_user.id)
     chat_id = update.effective_chat.id
     username = update.effective_user.username
@@ -347,13 +375,9 @@ async def do_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     save_user_chat_info(user_id, chat_id, username)
 
     prompt = update.message.text.strip() if update.message and update.message.text else ""
-    
-    logger.info(f"📱 TELEGRAM BOT: Received command from user {user_id}")
-    logger.info(f"📱 TELEGRAM BOT: Prompt: '{prompt[:100]}...'")
 
     # Handle photo upload if present
     if update.message and update.message.photo:
-        logger.info(f"📱 TELEGRAM BOT: Photo upload detected from user {user_id}")
         # Get the highest resolution photo
         photo = update.message.photo[-1]
         file_id = photo.file_id
@@ -361,29 +385,21 @@ async def do_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         photo_bytes = await new_file.download_as_bytearray()
         # Save photo to Firestore
         save_photo(user_id, photo_bytes, file_id)
-        logger.info(f"📱 TELEGRAM BOT: ✅ Photo saved for user {user_id}")
         await update.message.reply_text("Photo uploaded and saved to Firestore!")
         # Optionally, continue to process the prompt if present
         if not prompt:
-            logger.info("📱 TELEGRAM BOT: No text prompt with photo, ending processing")
             return
 
     if not prompt:
-        logger.warning(f"📱 TELEGRAM BOT: Empty prompt from user {user_id}")
         await update.message.reply_text("Please provide an action, e.g. 'summarize news'")
         return
     
     payload = {"user_id": user_id, "prompt": prompt}
-    logger.info(f"📱 TELEGRAM BOT: Sending request to backend: {BACKEND_URL}")
-    logger.debug(f"📱 TELEGRAM BOT: Payload: {payload}")
     
     try:
-        logger.info("📱 TELEGRAM BOT: Making HTTP request to backend...")
         response = requests.post(BACKEND_URL, json=payload, timeout=30)
-        logger.info(f"📱 TELEGRAM BOT: Backend response status: {response.status_code}")
         
         if response.status_code == 200:
-            logger.info("📱 TELEGRAM BOT: ✅ Backend request successful, handling response...")
             await handle_backend_response(update, user_id, response)
         else:
             logger.error(f"📱 TELEGRAM BOT: ❌ Backend error {response.status_code}: {response.text}")
@@ -396,9 +412,11 @@ async def do_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def connect(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle /connect command for Google services authorization."""
+    print(f"Executing function connect from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:393")
     user_id = str(update.effective_user.id)
-    logger.info(f"User {user_id} requested Google services connection")
-    
+
+    clear_google_tokens(user_id)
+
     tokens = get_google_tokens(user_id)
     if tokens:
         await update.message.reply_text("Your Google services are already connected!")
@@ -417,13 +435,13 @@ async def connect(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def run_bot() -> None:
     """Initialize and run the Telegram bot."""
+    print(f"Executing function run_bot from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:412")
     app = ApplicationBuilder().token(TELEGRAM_BOT_API_KEY).build()
     
     # Add handlers
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, do_command))
     app.add_handler(CommandHandler("connect", connect))
     
-    logger.info("Bot starting...")
     app.run_polling()
 
 

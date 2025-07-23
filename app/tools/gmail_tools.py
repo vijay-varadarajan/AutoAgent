@@ -44,14 +44,13 @@ class SendEmailTool(BaseGoogleTool):
     
     def _run(self, recipient: str, subject: str, body: str, cc: str = "", bcc: str = "") -> str:
         """Send an email using Gmail API."""
-        logger.info(f"Sending email to {recipient} with subject '{subject}'")
+        print(f"Executing function _run from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\gmail_tools.py:45")
         try:
             # Get authenticated credentials
             credentials = self.get_credentials()
             if not credentials:
                 return "Failed to authenticate with Google Gmail. Please reconnect your Google account."
             
-            logger.info(f"User {self.user_id} - Sending email to {recipient} with subject '{subject}'")
             # Build Gmail service
             service = build('gmail', 'v1', credentials=credentials)
             
@@ -78,7 +77,6 @@ class SendEmailTool(BaseGoogleTool):
             ).execute()
             
             result = f"Email sent successfully to {recipient} with message ID: {sent_message['id']}"
-            logger.info(f"User {self.user_id} - {result}")
             return result
             
         except Exception as e:
@@ -86,6 +84,7 @@ class SendEmailTool(BaseGoogleTool):
     
     async def _arun(self, recipient: str, subject: str, body: str, cc: str = "", bcc: str = "") -> str:
         """Async version - currently just calls sync version."""
+        print(f"Executing function _arun from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\gmail_tools.py:85")
         return self._run(recipient, subject, body, cc, bcc)
 
 
@@ -104,6 +103,7 @@ class ReadEmailTool(BaseGoogleTool):
     
     def _run(self, query: str = "", max_results: int = 10) -> str:
         """Read/search emails using Gmail API."""
+        print(f"Executing function _run from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\gmail_tools.py:103")
         try:
             # Get authenticated credentials
             credentials = self.get_credentials()
@@ -128,21 +128,26 @@ class ReadEmailTool(BaseGoogleTool):
             # Get details for each message
             email_summaries = []
             for msg in messages[:max_results]:
+                # Get full message details including body
                 msg_detail = service.users().messages().get(
                     userId='me',
                     id=msg['id'],
-                    format='metadata',
-                    metadataHeaders=['From', 'Subject', 'Date']
+                    format='full'  # Changed from 'metadata' to 'full' to get body
                 ).execute()
                 
+                # Extract headers
                 headers = msg_detail['payload'].get('headers', [])
                 header_dict = {h['name']: h['value'] for h in headers}
+                
+                # Extract body content
+                body_content = self._extract_email_body(msg_detail['payload'])
                 
                 email_summaries.append({
                     'id': msg['id'],
                     'from': header_dict.get('From', 'Unknown'),
                     'subject': header_dict.get('Subject', 'No Subject'),
-                    'date': header_dict.get('Date', 'Unknown')
+                    'date': header_dict.get('Date', 'Unknown'),
+                    'body': body_content
                 })
             
             # Format response
@@ -150,14 +155,63 @@ class ReadEmailTool(BaseGoogleTool):
             for i, email in enumerate(email_summaries, 1):
                 result += f"{i}. From: {email['from']}\n"
                 result += f"   Subject: {email['subject']}\n"
+                result += f"   Body: {email['body']}\n"
                 result += f"   Date: {email['date']}\n\n"
             
-            logger.info(f"User {self.user_id} - Retrieved {len(email_summaries)} emails")
             return result
             
         except Exception as e:
             return self.handle_api_error(e, "reading emails")
+
+    def _extract_email_body(self, payload) -> str:
+        """Extract email body content from Gmail API payload."""
+        print(f"Executing function _extract_email_body from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\gmail_tools.py:165")
+        
+        body = ""
+        
+        # Handle multipart messages
+        if 'parts' in payload:
+            for part in payload['parts']:
+                if part['mimeType'] == 'text/plain':
+                    if 'data' in part['body']:
+                        body_data = part['body']['data']
+                        body = base64.urlsafe_b64decode(body_data).decode('utf-8')
+                        break
+                elif part['mimeType'] == 'text/html' and not body:
+                    # Fallback to HTML if no plain text
+                    if 'data' in part['body']:
+                        body_data = part['body']['data']
+                        body = base64.urlsafe_b64decode(body_data).decode('utf-8')
+                elif 'parts' in part:
+                    # Recursively check nested parts
+                    body = self._extract_email_body(part)
+                    if body:
+                        break
+        
+        # Handle single part messages
+        elif payload['mimeType'] == 'text/plain':
+            if 'data' in payload['body']:
+                body_data = payload['body']['data']
+                body = base64.urlsafe_b64decode(body_data).decode('utf-8')
+        
+        elif payload['mimeType'] == 'text/html':
+            if 'data' in payload['body']:
+                body_data = payload['body']['data']
+                body = base64.urlsafe_b64decode(body_data).decode('utf-8')
+        
+        # Clean up and truncate body for display
+        if body:
+            # Remove excessive whitespace and newlines
+            body = ' '.join(body.split())
+            # Truncate if too long (keep first 200 characters)
+            if len(body) > 200:
+                body = body[:200] + "..."
+            return body
+        
+        return "<No Body>"
+    
     
     async def _arun(self, query: str = "", max_results: int = 10) -> str:
         """Async version - currently just calls sync version."""
+        print(f"Executing function _arun from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\gmail_tools.py:159")
         return self._run(query, max_results)

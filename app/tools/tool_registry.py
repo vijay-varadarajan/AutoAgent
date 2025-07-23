@@ -22,10 +22,10 @@ from app.tools.gmail_tools import SendEmailTool, ReadEmailTool
 # from app.tools.meet_tools import CreateMeetingTool, ListMeetingsTool
 
 # Action to tool class mapping
-TOOL_REGISTRY: Dict[str, Type[BaseGoogleTool]] = {
+TOOL_REGISTRY: Dict[tuple[str, str], Type[BaseGoogleTool]] = {
     # Email actions
-    "email": SendEmailTool,
-    "read_email": ReadEmailTool,
+    ("email", "send"): SendEmailTool,
+    ("email", "read"): ReadEmailTool,
     
     # TODO: Add other actions when tools are created
     # # Calendar actions
@@ -60,39 +60,26 @@ TOOL_REGISTRY: Dict[str, Type[BaseGoogleTool]] = {
     # "list_meetings": ListMeetingsTool,
 }
 
-def create_tool_for_action(action: str, user_id: str) -> BaseGoogleTool:
-    """
-    Create a tool instance for the given action and user.
+def create_tool_for_action(action: str, user_id: str, mode: str = "send") -> BaseGoogleTool:
+    """Create tool instance for specific action and mode."""
+    print(f"Executing function create_tool_for_action from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\tool_registry.py:52")
     
-    Args:
-        action: The action type (e.g., 'email', 'calendar_event')
-        user_id: The user ID for credential retrieval
-        
-    Returns:
-        Configured tool instance
-        
-    Raises:
-        ValueError: If action is not supported
-    """
-    logger.info(f"🔧 TOOL REGISTRY: Creating tool for action '{action}' and user {user_id}")
+    tool_key = (action, mode)
+    tool_class = TOOL_REGISTRY.get(tool_key)
     
-    if action not in TOOL_REGISTRY:
-        supported_actions = list(TOOL_REGISTRY.keys())
-        error_msg = f"Unsupported action '{action}'. Supported actions: {supported_actions}"
-        logger.error(f"🔧 TOOL REGISTRY: ❌ {error_msg}")
-        raise ValueError(error_msg)
-    
-    tool_class = TOOL_REGISTRY[action]
-    logger.info(f"🔧 TOOL REGISTRY: Found tool class: {tool_class.__name__}")
+    if not tool_class:
+        logger.error(f"No tool found for action: {action}, mode: {mode}")
+        return None
     
     try:
         tool_instance = tool_class(user_id=user_id)
-        logger.info(f"🔧 TOOL REGISTRY: ✅ Successfully created {tool_instance.name} for user {user_id}")
+        logger.info(f"Created {tool_class.__name__} for user {user_id}")
         return tool_instance
     except Exception as e:
-        logger.error(f"🔧 TOOL REGISTRY: ❌ Failed to create tool {tool_class.__name__}: {e}")
-        raise
-
+        logger.error(f"Failed to create tool {tool_class.__name__}: {e}")
+        return None
+    
+    
 def create_tools_for_workflow(workflow_tasks: List[Dict], user_id: str) -> List[BaseGoogleTool]:
     """
     Create tool instances for all actions in a workflow.
@@ -104,25 +91,29 @@ def create_tools_for_workflow(workflow_tasks: List[Dict], user_id: str) -> List[
     Returns:
         List of configured tool instances
     """
+    print(f"Executing function create_tools_for_workflow from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\tool_registry.py:96")
     tools = []
     for task in workflow_tasks:
         action = task.get('action')
+        mode = task.get('mode')
         if action and action in TOOL_REGISTRY:
             try:
-                tool = create_tool_for_action(action, user_id)
+                tool = create_tool_for_action(action, user_id, mode)
                 tools.append(tool)
             except Exception as e:
                 # Log error but continue with other tools
-                print(f"Warning: Failed to create tool for action '{action}': {e}")
+                logger.error(f"Failed to create tool for action '{action}': {e}")
     
     return tools
 
 def get_available_actions() -> List[str]:
     """Get list of all available action types."""
+    print(f"Executing function get_available_actions from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\tool_registry.py:121")
     return list(TOOL_REGISTRY.keys())
 
 def get_tool_descriptions() -> Dict[str, str]:
     """Get descriptions for all available tools."""
+    print(f"Executing function get_tool_descriptions from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\tools\\tool_registry.py:125")
     descriptions = {}
     for action, tool_class in TOOL_REGISTRY.items():
         # Create a temporary instance to get description

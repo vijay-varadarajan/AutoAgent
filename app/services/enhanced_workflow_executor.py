@@ -27,80 +27,65 @@ class EnhancedWorkflowExecutor:
     """Enhanced workflow executor with LangChain Google API tools and thinking process."""
     
     def __init__(self, workflow_id: str, telegram_update=None):
-        logger.info(f"🔧 EXECUTOR: Initializing EnhancedWorkflowExecutor for workflow {workflow_id}")
+        print(f"Executing function __init__ from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:29")
         self.workflow_id = workflow_id
         self.workflow_data = None
         self.user_id = None
         self.tools = {}
         self.telegram_update = telegram_update
         self.thinking_message_id = None
-        logger.info(f"🔧 EXECUTOR: Telegram update {'available' if telegram_update else 'not available'}")
         
         self.use_background_messaging = telegram_update is None  # Use background if no update available
-        logger.info(f"🔧 EXECUTOR: Background messaging: {'enabled' if self.use_background_messaging else 'disabled'}")
         
         
     def load_workflow(self) -> bool:
         """Load workflow data from Firestore."""
-        logger.info(f"🔧 EXECUTOR: Loading workflow data for {self.workflow_id}")
+        print(f"Executing function load_workflow from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:41")
         try:
             self.workflow_data = get_workflow_by_id(self.workflow_id)
             if not self.workflow_data:
                 logger.error(f"🔧 EXECUTOR: ❌ Workflow {self.workflow_id} not found in Firestore")
                 return False
             
-            logger.info(f"🔧 EXECUTOR: ✅ Workflow data loaded successfully")
-            
             self.user_id = self.workflow_data.get('user_id')
             if not self.user_id:
                 logger.error(f"🔧 EXECUTOR: ❌ No user_id found in workflow {self.workflow_id}")
                 return False
             
-            logger.info(f"🔧 EXECUTOR: User ID: {self.user_id}")
-            
             # Initialize tools for this workflow
-            logger.info("🔧 EXECUTOR: Initializing tools for workflow...")
             parsed_data = self.workflow_data.get('parsed', {})
             if isinstance(parsed_data, str):
                 try:
-                    logger.info("🔧 EXECUTOR: Parsed data is string, converting to dict...")
                     parsed_data = json.loads(parsed_data)
                 except json.JSONDecodeError:
                     logger.error("🔧 EXECUTOR: ❌ Failed to parse workflow data JSON")
                     return False
             
             tasks = parsed_data.get('tasks', [])
-            logger.info(f"🔧 EXECUTOR: Found {len(tasks)} tasks in workflow")
             
             # Create tools for each unique action
-            unique_actions = set(task.get('action') for task in tasks if task.get('action'))
-            logger.info(f"🔧 EXECUTOR: Unique actions needed: {list(unique_actions)}")
-            
-            for action in unique_actions:
+            unique_action_modes = set(((task.get('action'), task.get('mode')) for task in tasks if task.get('action')))
+
+            for action, mode in unique_action_modes:
                 try:
-                    logger.info(f"🔧 EXECUTOR: Creating tool for action: {action}")
-                    tool = create_tool_for_action(action, self.user_id)
+                    tool = create_tool_for_action(action, self.user_id, mode)
                     if tool:
                         self.tools[action] = tool
-                        logger.info(f"🔧 EXECUTOR: ✅ Tool created for {action}: {tool.name}")
                     else:
                         logger.warning(f"🔧 EXECUTOR: ⚠️ No tool available for action: {action}")
                 except Exception as e:
                     logger.error(f"🔧 EXECUTOR: ❌ Failed to create tool for {action}: {e}")
             
-            logger.info(f"🔧 EXECUTOR: Initialized {len(self.tools)} tools for workflow {self.workflow_id}")
-            logger.info(f"🔧 EXECUTOR: Loaded workflow {self.workflow_id} for user {self.user_id}")
             return True
             
         except Exception as e:
             logger.error(f"🔧 EXECUTOR: ❌ Error loading workflow: {e}")
             return False
         
-        self.telegram_update = telegram_update
-        self.thinking_message_id = None
         
     def load_workflow(self) -> bool:
         """Load workflow data from Firestore."""
+        print(f"Executing function load_workflow from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:88")
         try:
             self.workflow_data = get_workflow_by_id(self.workflow_id)
             if not self.workflow_data:
@@ -131,7 +116,9 @@ class EnhancedWorkflowExecutor:
             logger.error(f"Error loading workflow {self.workflow_id}: {e}")
             return False
     
+    
     def _initialize_tools(self, tasks: List[Dict[str, Any]]) -> None:
+        print(f"Executing function _initialize_tools from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:120")
         """Initialize LangChain tools for workflow tasks."""
         try:
             workflow_tools = create_tools_for_workflow(tasks, self.user_id)
@@ -146,9 +133,10 @@ class EnhancedWorkflowExecutor:
         except Exception as e:
             logger.error(f"Error initializing tools for workflow {self.workflow_id}: {e}")
     
+    
     async def _send_thinking(self, message: str) -> Optional[int]:
         """Send thinking message to Telegram if available."""
-        logger.info(f"🔧 EXECUTOR: 💭 Sending thinking message: {message}")
+        print(f"Executing function _send_thinking from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:137")
         
         if self.use_background_messaging:
             # Use background messenger when no telegram_update is available
@@ -158,7 +146,6 @@ class EnhancedWorkflowExecutor:
             try:
                 from app.services.telegram_bot import send_thinking_message
                 message_id = await send_thinking_message(self.telegram_update, message)
-                logger.info(f"🔧 EXECUTOR: ✅ Thinking message sent with ID: {message_id}")
                 return message_id
             except Exception as e:
                 logger.error(f"🔧 EXECUTOR: ❌ Error sending thinking message: {e}")
@@ -166,8 +153,10 @@ class EnhancedWorkflowExecutor:
             logger.info("🔧 EXECUTOR: No Telegram update available, skipping thinking message")
         return None
     
+    
     async def _update_thinking(self, message_id: Optional[int], new_message: str):
         """Update thinking message on Telegram if available."""
+        print(f"Executing function _update_thinking from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:157")
         logger.info(f"🔧 EXECUTOR: 📝 Updating thinking message {message_id}: {new_message}")
         
         if self.use_background_messaging:
@@ -185,6 +174,7 @@ class EnhancedWorkflowExecutor:
             logger.info(f"🔧 EXECUTOR: No Telegram update or message ID, skipping update")
     
     async def _delete_thinking(self, message_id: Optional[int]):
+        print(f"Executing function _delete_thinking from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:176")
         """Delete thinking message on Telegram if available."""
         logger.info(f"🔧 EXECUTOR: 🗑️ Deleting thinking message {message_id}")
         
@@ -212,6 +202,7 @@ class EnhancedWorkflowExecutor:
                 logger.error(f"🔧 EXECUTOR: ❌ Error sending final message: {e}")
 
     def start_execution(self) -> bool:
+        print(f"Executing function start_execution from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:204")
         """Mark workflow as in progress and log start."""
         try:
             success = update_workflow_status(self.workflow_id, WorkflowStatus.IN_PROGRESS)
@@ -232,27 +223,35 @@ class EnhancedWorkflowExecutor:
     
     def _validate_email_tasks(self, tasks: List[Dict[str, Any]]) -> Optional[str]:
         """Validate email tasks have required fields. Returns error message if validation fails."""
+        print(f"Executing function _validate_email_tasks from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:224")
         missing_fields = []
         
         # Define placeholder values that should be treated as missing
         placeholder_patterns = {
             'recipient': ['recipient@example.com', 'email@example.com', 'user@example.com', 'example@email.com'],
-            'subject': ['Subject', 'Email subject', 'Email Subject', 'subject', 'SUBJECT']
+            'subject': ['Subject', 'Email subject', 'Email Subject', 'subject', 'SUBJECT'],
+            'query': ['query', 'search query', 'Search Query', 'QUERY', 'search']
         }
         
         for i, task in enumerate(tasks):
             if task.get('action') == 'email':
                 task_missing = []
+                mode = task.get('mode', 'write')  # Default to write mode for backward compatibility
                 
-                # Check for recipient
-                recipient = str(task.get('recipient', '')).strip()
-                if not recipient or recipient in placeholder_patterns['recipient']:
-                    task_missing.append('recipient')
-                
-                # Check for subject  
-                subject = str(task.get('subject', '')).strip()
-                if not subject or subject in placeholder_patterns['subject']:
-                    task_missing.append('subject')
+                if mode == 'read':
+                    # For read mode, only query is required
+                    query = str(task.get('query', '')).strip()
+                    if not query or query in placeholder_patterns['query']:
+                        task_missing.append('query')
+                else:
+                    # For write mode (send email), recipient and subject are required
+                    recipient = str(task.get('recipient', '')).strip()
+                    if not recipient or recipient in placeholder_patterns['recipient']:
+                        task_missing.append('recipient')
+                    
+                    subject = str(task.get('subject', '')).strip()
+                    if not subject or subject in placeholder_patterns['subject']:
+                        task_missing.append('subject')
                 
                 if task_missing:
                     missing_fields.extend(task_missing)
@@ -273,8 +272,10 @@ class EnhancedWorkflowExecutor:
         
         return None
 
+
     async def execute_workflow(self) -> bool:
         """Execute the entire workflow using LangChain tools with thinking process."""
+        print(f"Executing function execute_workflow from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:276")
         logger.info(f"🔧 EXECUTOR: 🚀 Starting workflow execution for {self.workflow_id}")
         try:
             # Send initial thinking message
@@ -342,6 +343,7 @@ class EnhancedWorkflowExecutor:
                 await self._update_thinking(self.thinking_message_id, f"⚡ Executing {action}...")
                 
                 task_result = await self._execute_task(task, i + 1)
+
                 execution_results.append(task_result)
                 logger.info(f"🔧 EXECUTOR: Task {i+1} result: {'SUCCESS' if task_result.get('success') else 'FAILED'}")
                 
@@ -358,6 +360,7 @@ class EnhancedWorkflowExecutor:
                 else:
                     logger.info(f"🔧 EXECUTOR: ✅ Task {i + 1} completed successfully")
                     await self._update_thinking(self.thinking_message_id, f"✅ Completed {action}")
+                    
                     self.log_tool_execution(
                         task.get('action', 'unknown'), 
                         True, 
@@ -381,6 +384,7 @@ class EnhancedWorkflowExecutor:
                 await self._delete_thinking(self.thinking_message_id)
                 await self._send_final_result("🎉 Workflow completed successfully!")
                 return self.complete_execution(completion_data)
+            
             elif successful_tasks > 0:
                 # Partial success
                 logger.warning(f"🔧 EXECUTOR: ⚠️ Partial success - {len(tasks) - successful_tasks} tasks failed")
@@ -409,9 +413,11 @@ class EnhancedWorkflowExecutor:
     
     async def _execute_task(self, task: Dict[str, Any], task_number: int) -> Dict[str, Any]:
         """Execute a single task using the appropriate LangChain tool."""
+        print(f"Executing function _execute_task from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:414")
         action = task.get('action')
-        print(f"🔧 EXECUTOR: Executing task {task_number} with action '{action}'")
-        
+        mode = task.get('mode')  # Default to write mode if not specified
+        print(f"🔧 EXECUTOR: Executing task {task_number} with action '{action}' and mode '{mode}'")
+
         if not action:
             return {
                 "success": False,
@@ -419,21 +425,28 @@ class EnhancedWorkflowExecutor:
                 "task": task
             }
         
+        if not mode:
+            return {
+                "success": False,
+                "error": "No mode specified in task",
+                "task": task
+            }
+        
         try:
             # Get the appropriate tool
             print(f"🔧 EXECUTOR: Executing task by getting tool for {task_number} with action '{action}'")
-            tool = self._get_tool_for_action(action)
-            print(f"🔧 EXECUTOR: Using tool '{tool.name}' for action '{action}'")
+            tool = self._get_tool_for_action(action , mode)
+            print(f"🔧 EXECUTOR: Using tool '{tool.name}' for action '{action}' and mode '{mode}'")
             if not tool:
                 return {
                     "success": False,
-                    "error": f"No tool available for action: {action}",
+                    "error": f"No tool available for action: {action} and mode: {mode}",
                     "task": task
                 }
             
             # Prepare tool arguments from task data
             print(f"🔧 EXECUTOR: Preparing arguments for tool '{tool.name}' with action {action} and task {task}")
-            tool_args = self._prepare_tool_arguments(action, task)
+            tool_args = self._prepare_tool_arguments(action, task, mode)
 
             if isinstance(tool_args, str):
                 try:
@@ -455,6 +468,7 @@ class EnhancedWorkflowExecutor:
                 "success": True,
                 "result": result,
                 "action": action,
+                "mode": mode,
                 "task": task
             }
             
@@ -468,8 +482,9 @@ class EnhancedWorkflowExecutor:
                 "task": task
             }
     
-    def _get_tool_for_action(self, action: str) -> Optional[BaseGoogleTool]:
+    def _get_tool_for_action(self, action: str, mode: str) -> Optional[BaseGoogleTool]:
         """Get the appropriate tool for an action."""
+        print(f"Executing function _get_tool_for_action from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:484")
         # Try to get existing tool first
         for tool_name, tool in self.tools.items():
             if action in tool_name or tool_name in action:
@@ -477,38 +492,50 @@ class EnhancedWorkflowExecutor:
         
         # If not found, try to create it dynamically
         try:
-            logger.info(f"🔧 EXECUTOR: Creating tool for action: {action}")
-            tool = create_tool_for_action(action, self.user_id)
+            logger.info(f"🔧 EXECUTOR: Creating tool for action: {action} and mode: {mode}")
+            tool = create_tool_for_action(action, self.user_id, mode)
             self.tools[tool.name] = tool
             return tool
         except Exception as e:
             logger.error(f"Failed to create tool for action {action}: {e}")
             return None
-    
-    def _prepare_tool_arguments(self, action: str, task: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _prepare_tool_arguments(self, action: str, task: Dict[str, Any], mode: str) -> Dict[str, Any]:
         """Prepare arguments for tool execution based on action and task data."""
+        print(f"Executing function _prepare_tool_arguments from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:502")
         # Remove the 'action' key and pass the rest as arguments
         args = {k: v for k, v in task.items() if k != 'action'}
         print(f"🔧 EXECUTOR: Preparing arguments for action '{action}': {args}")
         
         # Ensure required fields exist for email actions - only set defaults for optional fields
         if action == 'email':
-            # Only handle missing OR None values for optional fields (body, cc, bcc)
-            if 'body' not in args or args['body'] is None:
-                args['body'] = ""  # ✅ Fix None values for optional field
-            if 'cc' not in args or args['cc'] is None:
-                args['cc'] = ""  # ✅ Optional field
-            if 'bcc' not in args or args['bcc'] is None:
-                args['bcc'] = ""  # ✅ Optional field
-            # Note: recipient and subject are now validated earlier and should not be empty
+            
+            if mode == 'read':
+                # For read mode, only 'query' is required
+                if 'query' not in args or not args['query']:
+                    raise ValueError("Missing required field 'query' for email read action")
+            
+            elif mode == 'send':
+                # Only handle missing OR None values for optional fields (body, cc, bcc)
+                if 'body' not in args or args['body'] is None:
+                    args['body'] = ""  # ✅ Fix None values for optional field
+                if 'cc' not in args or args['cc'] is None:
+                    args['cc'] = ""  # ✅ Optional field
+                if 'bcc' not in args or args['bcc'] is None:
+                    args['bcc'] = ""  # ✅ Optional field
+                # Note: recipient and subject are now validated earlier and should not be empty
 
         print(f"🔧 EXECUTOR: Final arguments for action '{action}': {args}")
         return args  # ✅ Return dict, not string
     
+    
     def complete_execution(self, results: Optional[Dict[str, Any]] = None) -> bool:
+    
         """Mark workflow as completed and log completion."""
+        print(f"Executing function complete_execution from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:531")
         try:
             success = update_workflow_status(self.workflow_id, WorkflowStatus.COMPLETED)
+            
             if success:
                 add_execution_log_entry(
                     self.workflow_id,
@@ -519,13 +546,24 @@ class EnhancedWorkflowExecutor:
                         "results": results
                     }
                 )
-            return success
+            
+            # send final result message to user
+            if results:
+                logger.info(f"🔧 EXECUTOR: Sending final results: {results}")
+                final_message = results    
+                if isinstance(final_message, dict):
+                    final_message = json.dumps(final_message, indent=2)
+                logger.info(f"🔧 EXECUTOR: Final message: {final_message}")
+                
+            return success, final_message if results else None
+        
         except Exception as e:
             logger.error(f"Error completing workflow execution: {e}")
             return False
     
     def fail_execution(self, error_message: str, error_code: Optional[str] = None) -> bool:
         """Mark workflow as failed and log error."""
+        print(f"Executing function fail_execution from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:554")
         try:
             success = update_workflow_status(self.workflow_id, WorkflowStatus.FAILED)
             if success:
@@ -543,6 +581,7 @@ class EnhancedWorkflowExecutor:
     
     def log_tool_execution(self, tool_name: str, success: bool, details: Optional[Dict[str, Any]] = None):
         """Log a tool execution attempt."""
+        print(f"Executing function log_tool_execution from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:570")
         entry_type = LogEntryType.SUCCESS if success else LogEntryType.ERROR
         message = f"Tool '{tool_name}' executed {'successfully' if success else 'with errors'}"
         
@@ -554,6 +593,7 @@ class EnhancedWorkflowExecutor:
             details=details
         )
     
+    
     def log_info(self, message: str, details: Optional[Dict[str, Any]] = None):
         """Log an informational message."""
         add_execution_log_entry(
@@ -563,6 +603,7 @@ class EnhancedWorkflowExecutor:
             details=details
         )
     
+    
     def log_warning(self, message: str, details: Optional[Dict[str, Any]] = None):
         """Log a warning message."""
         add_execution_log_entry(
@@ -571,6 +612,7 @@ class EnhancedWorkflowExecutor:
             message,
             details=details
         )
+
 
 def execute_workflow_with_tools(workflow_id: str) -> bool:
     """
@@ -582,6 +624,7 @@ def execute_workflow_with_tools(workflow_id: str) -> bool:
     Returns:
         True if execution was successful, False otherwise
     """
+    print(f"Executing function execute_workflow_with_tools from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:605")
     executor = EnhancedWorkflowExecutor(workflow_id)
     
     if not executor.load_workflow():

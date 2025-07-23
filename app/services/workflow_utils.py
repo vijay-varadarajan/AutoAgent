@@ -15,16 +15,19 @@ class WorkflowExecutor:
     """Helper class for executing workflows with proper logging and status tracking."""
     
     def __init__(self, workflow_id: str):
+        print(f"Executing function __init__ from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:14")
         self.workflow_id = workflow_id
         self.workflow_data = None
         
     def load_workflow(self) -> bool:
         """Load workflow data from Firestore."""
+        print(f"Executing function load_workflow from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:20")
         self.workflow_data = get_workflow_by_id(self.workflow_id)
         return self.workflow_data is not None
     
     def start_execution(self) -> bool:
         """Mark workflow as in progress and log start."""
+        print(f"Executing function start_execution from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:25")
         success = update_workflow_status(self.workflow_id, WorkflowStatus.IN_PROGRESS)
         if success:
             add_execution_log_entry(
@@ -37,6 +40,7 @@ class WorkflowExecutor:
     
     def complete_execution(self, results: Optional[Dict[str, Any]] = None) -> bool:
         """Mark workflow as completed and log completion."""
+        print(f"Executing function complete_execution from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:38")
         success = update_workflow_status(self.workflow_id, WorkflowStatus.COMPLETED)
         if success:
             add_execution_log_entry(
@@ -49,6 +53,7 @@ class WorkflowExecutor:
     
     def fail_execution(self, error_message: str, error_code: Optional[str] = None) -> bool:
         """Mark workflow as failed and log error."""
+        print(f"Executing function fail_execution from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:51")
         success = update_workflow_status(self.workflow_id, WorkflowStatus.FAILED)
         if success:
             add_execution_log_entry(
@@ -62,6 +67,7 @@ class WorkflowExecutor:
     
     def log_tool_execution(self, tool_name: str, success: bool, details: Optional[Dict[str, Any]] = None):
         """Log a tool execution attempt."""
+        print(f"Executing function log_tool_execution from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:64")
         entry_type = LogEntryType.SUCCESS if success else LogEntryType.ERROR
         message = f"Tool '{tool_name}' executed {'successfully' if success else 'with errors'}"
         
@@ -75,6 +81,7 @@ class WorkflowExecutor:
     
     def log_info(self, message: str, details: Optional[Dict[str, Any]] = None):
         """Log an informational message."""
+        print(f"Executing function log_info from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:77")
         add_execution_log_entry(
             self.workflow_id,
             LogEntryType.INFO,
@@ -84,6 +91,7 @@ class WorkflowExecutor:
     
     def log_warning(self, message: str, details: Optional[Dict[str, Any]] = None):
         """Log a warning message."""
+        print(f"Executing function log_warning from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:86")
         add_execution_log_entry(
             self.workflow_id,
             LogEntryType.WARNING,
@@ -93,6 +101,7 @@ class WorkflowExecutor:
 
 def get_workflow_health_status(user_id: str) -> Dict[str, Any]:
     """Get overall health status of workflows for a user."""
+    print(f"Executing function get_workflow_health_status from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:94")
     from app.services.firestore_db import get_workflows_by_status
     
     pending_count = len(get_workflows_by_status(user_id, WorkflowStatus.PENDING))
@@ -116,6 +125,7 @@ def get_workflow_health_status(user_id: str) -> Dict[str, Any]:
 
 def retry_failed_workflow(workflow_id: str) -> bool:
     """Reset a failed workflow back to pending status for retry."""
+    print(f"Executing function retry_failed_workflow from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\workflow_utils.py:116")
     workflow = get_workflow_by_id(workflow_id)
     if not workflow or workflow.get("status") != WorkflowStatus.FAILED:
         return False
