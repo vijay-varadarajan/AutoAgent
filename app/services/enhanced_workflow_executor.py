@@ -378,11 +378,13 @@ class EnhancedWorkflowExecutor:
                 "execution_results": execution_results
             }
             
+            print(f"🔧 EXECUTOR: Execution results: {completion_data}")
             if successful_tasks == len(tasks):
                 logger.info("🔧 EXECUTOR: 🎉 All tasks completed successfully!")
                 await self._update_thinking(self.thinking_message_id, "🎉 All tasks completed successfully!")
                 await self._delete_thinking(self.thinking_message_id)
                 await self._send_final_result("🎉 Workflow completed successfully!")
+                await self._send_final_result(completion_data['execution_results'][0].get('result', 'No result'))
                 return self.complete_execution(completion_data)
             
             elif successful_tasks > 0:
@@ -485,17 +487,23 @@ class EnhancedWorkflowExecutor:
     def _get_tool_for_action(self, action: str, mode: str) -> Optional[BaseGoogleTool]:
         """Get the appropriate tool for an action."""
         print(f"Executing function _get_tool_for_action from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\enhanced_workflow_executor.py:484")
-        # Try to get existing tool first
-        for tool_name, tool in self.tools.items():
-            if action in tool_name or tool_name in action:
-                return tool
         
-        # If not found, try to create it dynamically
+        # Create a composite key for tool storage
+        tool_key = f"{action}_{mode}"
+        
+        # Check if we already have this specific tool
+        if tool_key in self.tools:
+            logger.info(f"🔧 EXECUTOR: Reusing existing tool for {action}_{mode}")
+            return self.tools[tool_key]
+        
+        # Create new tool
         try:
             logger.info(f"🔧 EXECUTOR: Creating tool for action: {action} and mode: {mode}")
             tool = create_tool_for_action(action, self.user_id, mode)
-            self.tools[tool.name] = tool
-            return tool
+            if tool:
+                self.tools[tool_key] = tool  # Use composite key
+                return tool
+            return None
         except Exception as e:
             logger.error(f"Failed to create tool for action {action}: {e}")
             return None
@@ -553,6 +561,7 @@ class EnhancedWorkflowExecutor:
                 final_message = results    
                 if isinstance(final_message, dict):
                     final_message = json.dumps(final_message, indent=2)
+                self._send_final_result(final_message)
                 logger.info(f"🔧 EXECUTOR: Final message: {final_message}")
                 
             return success, final_message if results else None

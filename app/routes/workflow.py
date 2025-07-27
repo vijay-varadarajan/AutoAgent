@@ -34,7 +34,7 @@ async def parse_and_save(req: WorkflowRequest):
         # Parse the workflow
         logger.info("🚀 WORKFLOW API: Calling Gemini parser...")
         structured_output = await parse_workflow(req.prompt)
-        logger.info(f"🚀 WORKFLOW API: Parser returned type: {type(structured_output)}")
+        logger.info(f"🚀 WORKFLOW API: Parser returned type: {type(structured_output)}, {structured_output}")
         
         # Validate that structured_output is a dictionary
         if not isinstance(structured_output, dict):
@@ -54,7 +54,35 @@ async def parse_and_save(req: WorkflowRequest):
         
         # Save workflow with initial status
         logger.info("🚀 WORKFLOW API: Saving workflow to Firebase...")
-        workflow_id = save_workflow(req.user_id, req.prompt, structured_output)
+
+        # remove the workflows that have action of 'conversation' and mode of 'unsupported'
+        workflows_only = structured_output.copy()
+        workflows_only["tasks"] = [
+            task for task in workflows_only["tasks"] 
+            if not (task.get("action") == "conversation" and task.get("mode") == "unsupported")
+        ]
+        logger.info(f"🚀 WORKFLOW API: Filtered tasks, remaining {len(workflows_only['tasks'])} tasks")
+        
+        conversations = [task for task in structured_output["tasks"] if task.get('action') == 'conversation']
+        print(f"Conversations found: {conversations}")
+        if conversations:
+            logger.info(f"🚀 WORKFLOW API: Found {len(conversations)} conversation tasks, sending Gemini response...")
+            return {"status": "saved", "workflow_id": 'conversation_001', "workflow": conversations}
+
+        if not workflows_only["tasks"]:
+            logger.warning("🚀 WORKFLOW API: No valid tasks found after filtering, returning empty workflow")
+            workflows_only = {"frequency": "once", "tasks": []}
+
+        for task in workflows_only["tasks"]:
+            if task.get("action") == "email" and task.get("mode") == "write":
+                if not task.get("subject"):
+                    logger.warning("🚀 WORKFLOW API: Email task found without subject, skipping")
+                    return None
+                elif not task.get("body"):
+                    logger.warning("🚀 WORKFLOW API: Email task found without body, skipping")
+                    return None
+        
+        workflow_id = save_workflow(req.user_id, req.prompt, workflows_only)
         logger.info(f"🚀 WORKFLOW API: ✅ Workflow saved with ID: {workflow_id}")
         
         # Log the initial creation
@@ -72,7 +100,7 @@ async def parse_and_save(req: WorkflowRequest):
         logger.info("🚀 WORKFLOW API: ✅ Execution log entry added")
         
         # Return the parsed workflow as well for downstream logic
-        response_data = {"status": "saved", "workflow_id": workflow_id, "workflow": structured_output}
+        response_data = {"status": "saved", "workflow_id": workflow_id, "workflow": workflows_only}
         logger.info(f"🚀 WORKFLOW API: ✅ Returning success response for workflow {workflow_id}")
         logger.debug(f"🚀 WORKFLOW API: Response data: {response_data}")
         return response_data

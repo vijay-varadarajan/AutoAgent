@@ -8,10 +8,13 @@ import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
+from app.services.gemini_parser import send_gemini_response
 from app.config import TELEGRAM_BOT_API_KEY, GOOGLE_CLIENT_ID
 from app.services.firestore_db import get_google_tokens, save_photo, save_user_chat_info, clear_google_tokens
 from app.services.enhanced_workflow_executor import EnhancedWorkflowExecutor
 from app.logging_config import setup_logging  # Import centralized logging
+from app.services.rag_service import rag_service
+from app.services.rag_state import rag_state
 
 # Get logger (centralized logging already configured)
 logger = logging.getLogger(__name__)
@@ -261,17 +264,23 @@ def validate_workflow(workflow: Any) -> Optional[str]:
     """Validate email workflow has required fields for both read and write modes. Returns error message if validation fails."""
     print(f"Executing function validate_workflow from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:233")
     parsed_workflow = parse_workflow_json(workflow)
+    print(f"Parsed workflow: {parsed_workflow}")
     if not parsed_workflow:
         return None
     
     missing_fields = []
     tasks = parsed_workflow.get("tasks", [])
+    conversations = [task for task in tasks if task.get('action') == 'conversation']
+
+    print(f"Conversations found: {conversations}")
+    if conversations:
+        return False, "not_workflow"  # Special flag for non-workflow messages
     
     # Define placeholder values that should be treated as missing
     placeholder_patterns = {
-        'recipient': ['recipient@example.com', 'email@example.com', 'user@example.com', 'example@email.com'],
-        'subject': ['Subject', 'Email subject', 'Email Subject', 'subject', 'SUBJECT'],
-        'query': ['query', 'search query', 'Search Query', 'QUERY', 'search']
+        'recipient': [' ', 'recipient@example.com', 'email@example.com', 'user@example.com', 'example@email.com'],
+        'subject': [' ', 'Subject', 'Email subject', 'Email Subject', 'subject', 'SUBJECT'],
+        'query': [' ', 'query', 'search query', 'Search Query', 'QUERY', 'search']
     }
     
     for i, task in enumerate(tasks):
@@ -307,18 +316,18 @@ def validate_workflow(workflow: Any) -> Optional[str]:
                 seen.add(field)
         
         if len(unique_missing) == 1:
-            return f"You have not provided {unique_missing[0]}. Please repeat with all required fields."
+            return True, f"You have not provided {unique_missing[0]}. Please repeat with all required fields."
         else:
-            return f"You have not provided {', '.join(unique_missing)}. Please repeat with all required fields."
+            return True, f"You have not provided {', '.join(unique_missing)}. Please repeat with all required fields."
     
-    return None
+    return True, None
 
 
 
 # Store for pending workflows per user (in production, use Redis or database)
 pending_workflows_by_user = {}
 
-async def handle_backend_response(update: Update, user_id: str, response: requests.Response) -> None:
+async def handle_backend_response(update: Update, user_id: str, response: requests.Response, prompt: str) -> None:
     """Handle the backend API response and start workflow execution."""
     print(f"Executing function handle_backend_response from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:301")
     try:
@@ -333,6 +342,10 @@ async def handle_backend_response(update: Update, user_id: str, response: reques
     workflow_id = data.get('workflow_id', 'unknown')
     
     # Send initial confirmation
+    print(f"Workflow ID: {workflow_id}")
+    if workflow_id == 'conversation_001':
+        await send_gemini_response(update, prompt)
+        return
     await update.message.reply_text(f"🎯 Workflow created! ID: {workflow_id}")
     
     workflow = data.get("workflow")
@@ -340,8 +353,11 @@ async def handle_backend_response(update: Update, user_id: str, response: reques
         return
 
     # Validate workflow requirements before proceeding
-    validation_error = validate_workflow(workflow)
-    if validation_error:
+    is_valid_workflow, validation_error = validate_workflow(workflow)
+    if not is_valid_workflow and validation_error == "not_workflow":
+        await send_gemini_response(update, prompt)
+        return
+    elif validation_error:
         logger.error(f"📱 TELEGRAM BOT: Workflow validation failed: {validation_error}")
         await update.message.reply_text(f"❌ {validation_error}")
         return
@@ -391,16 +407,39 @@ async def do_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             return
 
     if not prompt:
-        await update.message.reply_text("Please provide an action, e.g. 'summarize news'")
+        await update.message.reply_text("Please provide an action, e.g. 'Send email to <recipient> with subject <subject> and body <body>'.")
         return
+    
+    
+    # CHECK: If RAG is enabled for this user, route to RAG service
+    if rag_state.is_rag_enabled(user_id):
+        try:
+            # Send thinking message
+            thinking_msg = await update.message.reply_text("🤔 _Searching your website content..._", parse_mode='Markdown')
+            
+            # Query RAG service with user_id
+            rag_response = await rag_service.query(user_id, prompt)
+            
+            # Delete thinking message and send response
+            await thinking_msg.delete()
+            await update.message.reply_text(f"🔍 **RAG Response:**\n\n{rag_response}", parse_mode='Markdown')
+            return
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ RAG query failed: {str(e)}")
+            return
+        
     
     payload = {"user_id": user_id, "prompt": prompt}
     
     try:
         response = requests.post(BACKEND_URL, json=payload, timeout=30)
         
+        if not response:
+            await update.message.reply_text("❌ Wrong format of workflow. Please repeat with all required fields.")
+            return
         if response.status_code == 200:
-            await handle_backend_response(update, user_id, response)
+            await handle_backend_response(update, user_id, response, prompt)
         else:
             logger.error(f"📱 TELEGRAM BOT: ❌ Backend error {response.status_code}: {response.text}")
             await update.message.reply_text(f"Error: {response.text}")
@@ -431,6 +470,122 @@ async def connect(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "To connect your Google services, please click the button below and authorize access:",
         reply_markup=reply_markup
     )
+    
+    
+async def rag_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle RAG command to load website and enable RAG mode."""
+    user_id = str(update.effective_user.id)
+    
+    if update.message and update.message.text:
+        command_parts = update.message.text.strip().split()
+        
+        # Check if it's just "/rag" without URL
+        if len(command_parts) == 1:
+            if rag_state.is_rag_enabled(user_id):
+                # Clear user's RAG data and disable
+                rag_service.clear_user_data(user_id)
+                rag_state.disable_rag_for_user(user_id)
+                await update.message.reply_text("🔴 RAG mode disabled. Your data has been cleared. Back to normal AutoAgent mode.")
+            else:
+                await update.message.reply_text("Please provide a URL: `/rag https://example.com`")
+            return
+        
+        # Extract URL from command
+        urls = command_parts[1:] if len(command_parts) > 1 else ""
+
+        for url in urls:
+            if not url.startswith("http"):
+                await update.message.reply_text(f"This URL: {url} is invalid. Please provide a valid URL: `/rag https://example.com`")
+                return
+
+        # Send loading message
+        loading_msg = await update.message.reply_text("🔄 _Loading and indexing website content..._", parse_mode='Markdown')
+        
+        try:
+            # Load the website into RAG for this specific user
+            result = await rag_service.load_website(user_id, urls)
+            
+            # Enable RAG mode for this user
+            rag_state.enable_rag_for_user(user_id, urls)
+            
+            # Update the loading message
+            await loading_msg.edit_text(
+                f"✅ {result}\n\n"
+                f"🟢 RAG mode enabled! All your messages will now query this website content.\n"
+                f"Your personal collection: `user_{user_id}_rag`\n"
+                f"Send `/rag` again to disable RAG mode and clear your data."
+            )
+            
+        except Exception as e:
+            await loading_msg.edit_text(f"❌ Error loading website: {str(e)}")
+    
+    else:
+        await update.message.reply_text("Please provide a URL: `/rag https://example.com`")
+
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /start command - minimal welcome message."""
+    user_id = str(update.effective_user.id)
+    username = update.effective_user.username or update.effective_user.first_name or "User"
+    
+    welcome_message = f"""
+🤖 **Welcome to AutoAgent, {username}!**
+
+I'm your intelligent workflow automation assistant that can:
+• 📧 Automate email tasks
+• 🔗 Answer questions from websites
+• 🔌 Connect with Google services
+
+Send `/help` to see all available commands and features.
+
+**Quick start:** Try saying "Send email to someone@example.com with subject 'Hello' and body 'Hi there!'"
+"""
+    
+    await update.message.reply_text(welcome_message, parse_mode='Markdown')
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /help command - detailed functionality overview."""
+    help_message = """
+🤖 **AutoAgent - Complete Feature Guide**
+
+**📧 Email Automation**
+• Send emails: "Send email to john@example.com with subject 'Meeting' and body 'Let's meet tomorrow'"
+• Read emails: "Read emails from boss@company.com about project updates"
+
+**🔗 Smart Website RAG (Retrieval-Augmented Generation)**
+• Load any website: `/rag https://example.com`
+• Ask questions about the loaded content
+• Support multiple URLs: `/rag https://site1.com https://site2.com`
+• Disable RAG mode: `/rag` (without URL)
+
+**🔌 Google Services Integration**
+• Connect your account: `/connect`
+• Automatic permission requests for workflows
+• Currently supports: Gmail (send/read)
+• Coming soon: Calendar, Drive, Photos, Docs, Sheets
+
+**💬 Natural Language Processing**
+• Type requests naturally - no complex syntax needed
+• Automatic mode switching (workflow vs conversation)
+• Context-aware responses for RAG agent.
+
+**⚙️ Available Commands**
+• `/start` - Welcome message
+• `/help` - This detailed guide
+• `[No command] <action>` - Execute a workflow action
+• `/rag <url>` - Enable website Q&A mode
+• `/connect` - Link Google services
+
+**🚀 Usage Examples**
+1. "Send a test email to <recipient> with subject 'Test' and body 'Hello world'"
+2. `/rag https://docs.python.org` then ask "What is a list comprehension?"
+3. "Read my latest emails from gmail"
+
+Just type naturally - I'll understand and automate it for you! 🎯
+"""
+    
+    await update.message.reply_text(help_message, parse_mode='Markdown')
 
 
 def run_bot() -> None:
@@ -439,8 +594,11 @@ def run_bot() -> None:
     app = ApplicationBuilder().token(TELEGRAM_BOT_API_KEY).build()
     
     # Add handlers
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, do_command))
     app.add_handler(CommandHandler("connect", connect))
+    app.add_handler(CommandHandler("rag", rag_command))
     
     app.run_polling()
 

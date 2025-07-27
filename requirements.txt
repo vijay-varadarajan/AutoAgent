@@ -3,6 +3,7 @@ anyio==4.9.0
 APScheduler==3.11.0
 beautifulsoup4==4.13.4
 bs4==0.0.2
+chromadb
 CacheControl==0.14.3
 cachetools==5.5.2
 certifi==2025.4.26
@@ -39,7 +40,7 @@ langchain==0.3.25
 langchain-core==0.3.61
 langchain-text-splitters==0.3.8
 langchain-community==0.3.24
-langchain-google-community==2.0.16
+langchain-google-community
 langgraph==0.2.54
 langsmith==0.3.42
 msgpack==1.1.0
@@ -74,3 +75,6 @@ urllib3==2.4.0
 uvicorn==0.34.2
 zstandard==0.23.0
 python-telegram-bot
+langchain
+langchain-google-genai
+langgraph
