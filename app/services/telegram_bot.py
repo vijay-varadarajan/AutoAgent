@@ -577,7 +577,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • `/rag <url>` - Enable website Q&A mode
 • `/connect` - Link Google services
 
-**🚀 Usage Examples**
+__Usage Examples__
 1. "Send a test email to <recipient> with subject 'Test' and body 'Hello world'"
 2. `/rag https://docs.python.org` then ask "What is a list comprehension?"
 3. "Read my latest emails from gmail"
