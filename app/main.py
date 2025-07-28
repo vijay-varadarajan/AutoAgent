@@ -81,7 +81,16 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
+@app.get("/debug")
+async def debug():
+    return {
+        "port": os.environ.get("PORT", "not set"),
+        "python_path": os.getcwd(),
+        "env_vars": {k: v for k, v in os.environ.items() if not k.startswith("SECRET")}
+    }
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))
+    logger.info(f"Starting server on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
