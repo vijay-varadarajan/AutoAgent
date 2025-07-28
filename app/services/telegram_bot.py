@@ -1,6 +1,6 @@
 import json
 import logging
-import asyncio
+import os
 from typing import List, Optional, Set, Dict, Any
 from urllib.parse import urlencode
 
@@ -20,8 +20,8 @@ from app.services.rag_state import rag_state
 logger = logging.getLogger(__name__)
 
 # Constants
-BACKEND_URL = "http://localhost:8000/api/workflow/parse-and-save"
-REDIRECT_URI = "http://localhost:8000/api/oauth/callback"
+BACKEND_URL = f"{os.getenv('BACKEND_URL')}"
+REDIRECT_URI = f"{os.getenv('REDIRECT_URI')}"
 
 # Store for thinking messages (in production, use Redis or database)
 thinking_messages = {}
