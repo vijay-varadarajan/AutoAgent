@@ -20,8 +20,8 @@ from app.services.rag_state import rag_state
 logger = logging.getLogger(__name__)
 
 # Constants
-BACKEND_URL = f"{os.getenv('BACKEND_URL')}"
-REDIRECT_URI = f"{os.getenv('REDIRECT_URI')}"
+BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000/api/telegram/parse-and-save')
+REDIRECT_URI = os.getenv('REDIRECT_URI', 'http://localhost:8000/api/oauth/callback')
 
 # Store for thinking messages (in production, use Redis or database)
 thinking_messages = {}
@@ -431,7 +431,7 @@ async def do_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         
     
     payload = {"user_id": user_id, "prompt": prompt}
-    
+    print("backend url, payload:", BACKEND_URL, payload)
     try:
         response = requests.post(BACKEND_URL, json=payload, timeout=30)
         
