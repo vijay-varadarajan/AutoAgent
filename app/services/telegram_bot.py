@@ -20,7 +20,7 @@ from app.services.rag_state import rag_state
 logger = logging.getLogger(__name__)
 
 # Constants
-BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000/api/telegram/parse-and-save')
+BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000/api/workflow/parse-and-save')
 REDIRECT_URI = os.getenv('REDIRECT_URI', 'http://localhost:8000/api/oauth/callback')
 
 # Store for thinking messages (in production, use Redis or database)
