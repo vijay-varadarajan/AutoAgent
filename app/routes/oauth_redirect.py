@@ -7,11 +7,12 @@ from app.services.enhanced_workflow_executor import EnhancedWorkflowExecutor
 import asyncio
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-REDIRECT_URI = "http://localhost:8000/api/oauth/callback"
+REDIRECT_URI = f"{os.getenv('REDIRECT_URI', 'http://localhost:8000/api/oauth/callback')}"
 
 @router.get("/oauth/callback")
 async def oauth_callback(request: Request):

@@ -70,8 +70,8 @@ async def telegram_webhook(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Include existing routes
-app.include_router(workflow.router, prefix="/workflow", tags=["workflow"])
-app.include_router(oauth_redirect.router, tags=["oauth"])
+app.include_router(workflow.router, prefix="/api/workflow", tags=["workflow"])
+app.include_router(oauth_redirect.router, prefix="/api", tags=["oauth"])
 
 @app.get("/")
 async def root():
