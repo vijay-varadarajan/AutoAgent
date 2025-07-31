@@ -1,86 +1,32 @@
-# AutoAgent - LangChain Google API Tools Integration
+# AutoAgent - An Auto-training RAG Agent
 
-## 🚀 Quick Start
-
-### Prerequisites Check
-```bash
-python verify_setup.py
-```
-
-### Launch AutoAgent
-**Terminal 1 - FastAPI Backend:**
-```bash
-uvicorn app.main:app --reload
-```
-
-**Terminal 2 - Telegram Bot:**
-```bash
-python run_telegram_bot.py
-```
-
-### Test the Integration
-Send any of these messages to your Telegram bot:
-- `Send an email to test@example.com with subject "Hello from AutoAgent"`
-- `Create a calendar event for tomorrow at 2pm titled "Team Meeting"`
-- `Upload a file to Google Drive in Documents folder`
-- `Create a Google Doc with title "My Report"`
-
-You'll see real-time thinking process:
-```
-🤔 Preparing to execute workflow...
-🔍 Checking permissions...
-🚀 Starting workflow execution...
-⚡ Executing email...
-✅ Completed email
-🎉 All tasks completed successfully!
-```
+AutoAgent is a Telegram bot that automatically trains on user-provided websites to provide intelligent responses using the Gemini model. It supports Retrieval-Augmented Generation (RAG) workflows, allowing users to interact with their own content seamlessly.
 
 ## 🛠️ Features
+- **RAG Mode**: Automatically trains on user-provided websites.
+- **Gemini Integration**: Uses Gemini for intelligent responses.
+- **Telegram Bot**: Interact with the agent via Telegram.
+- **Web Scraping**: Fetches and processes website content.
+- **User Management**: Handles user-specific settings and preferences.
+- **Error Handling**: Robust error handling for smooth operation.
 
-### LangChain Google API Tools (20 tools available)
-- **Gmail**: Send/read emails
-- **Calendar**: Create/view events 
-- **Drive**: Upload/search files
-- **Sheets**: Create/update/read spreadsheets
-- **Docs**: Create/update/read documents
-- **Slides**: Create/add slides/read presentations
-- **Photos**: Upload/list photos
-- **Meet**: Create/list meetings
+## 🔗 Bot Link
+[https://t.me/autoagentv0_bot](https://t.me/autoagentv0_bot)
 
-### Enhanced Workflow Execution
-- ✅ Async processing with real-time updates
-- ✅ Thinking process display on Telegram
-- ✅ Firebase workflow tracking and persistence
-- ✅ OAuth flow integration for Google APIs
-- ✅ Comprehensive error handling and retry mechanisms
+## 🚀 Usage
+- Start the bot with `/start`.
+- Enable RAG mode with `/rag <website_link>`.
+- Ask questions to get responses based on the trained content.
+- Disable RAG mode with `/rag`.
+- Use `/help` for assistance.
+- Chat with the bot in normal mode.
 
-## 🧪 Testing
-
-```bash
-# Basic functionality tests
-python test_tools.py
-
-# Telegram integration tests  
-python test_telegram_integration.py
-
-# Quick start menu
-./start.sh
-```
-
-## 📋 Workflow Classification
-
-The system automatically classifies prompts into:
-- **Simple question / conversation**: Direct responses
-- **Task workflow**: Automated Google API execution with thinking process
-
-## 🔧 Configuration
-
-All configuration is handled through environment variables and JSON files:
-- `.env` - API keys and tokens
-- `serviceAccountKey.json` - Firebase credentials  
-- `google_oauth_client_secret_*.json` - Google OAuth credentials
-
-## 📚 Documentation
-
-- `docs/langchain_tools_integration_complete.md` - Complete technical documentation
-- `docs/firebase_enhancement_usage.md` - Firebase integration details
+## Tech Stack
+- **Python**: Main programming language.
+- **Telegram Bot API**: For bot interactions.
+- **Gemini**: For generating intelligent responses.
+- **ChromaDB**: For vector storage and retrieval.
+- **Web Scraping**: For fetching website content.
+- **LangChain**: For managing RAG workflows.
+- **Langgraph**: For visualizing and managing knowledge graphs.
+- **Google Cloud Run**: For hosting and deployment.
