@@ -108,13 +108,13 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     welcome_message = f"""
 🤖 **Welcome to AutoAgent, {username}!**
 
-I'm your intelligent workflow automation assistant that can:
+I'm your intelligent RAG agent that can:
 • 📧 Converse with you
-• 🔗 Answer questions from websites
+• 🔗 Learn info from websites and answer your questions
 
 Send `/help` to see all available commands and features.
 
-**Quick start:** Try saying "Send email to someone@example.com with subject 'Hello' and body 'Hi there!'"
+**Quick start:** Try saying "/rag https://example.com" to load a website and ask questions about it!
 """
     
     await update.message.reply_text(welcome_message, parse_mode='Markdown')
