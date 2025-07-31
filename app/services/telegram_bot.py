@@ -148,6 +148,43 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(help_message, parse_mode='Markdown')
 
 
+async def conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle user commands and process workflows. Also handle photo uploads."""
+    print(f"Executing function conversation from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:347")
+    user_id = str(update.effective_user.id)
+    chat_id = update.effective_chat.id
+    username = update.effective_user.username
+    
+    prompt = update.message.text.strip() if update.message and update.message.text else ""
+    
+    if not prompt:
+        await update.message.reply_text("Please provide an action, e.g. 'Send email to <recipient> with subject <subject> and body <body>'.")
+        return
+    
+    
+    # CHECK: If RAG is enabled for this user, route to RAG service
+    if rag_state.is_rag_enabled(user_id):
+        try:
+            # Send thinking message
+            thinking_msg = await update.message.reply_text("🤔 _Searching your website content..._", parse_mode='Markdown')
+            
+            # Query RAG service with user_id
+            rag_response = await rag_service.query(user_id, prompt)
+            
+            # Delete thinking message and send response
+            await thinking_msg.delete()
+            await update.message.reply_text(f"🔍 **RAG Response:**\n\n{rag_response}", parse_mode='Markdown')
+            return
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ RAG query failed: {str(e)}")
+            return
+        
+    else:
+        await update.message.reply_text(f"Not in RAG Mode.")
+        return
+
+
 def run_bot() -> None:
     """Initialize and run the Telegram bot."""
     print(f"Executing function run_bot from c:\\Users\\vijay\\Documents\\Agentic AI\\AutoAgent\\app\\services\\telegram_bot.py:412")
@@ -157,6 +194,7 @@ def run_bot() -> None:
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("rag", rag_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, conversation))
     
     app.run_polling()
 
