@@ -24,6 +24,7 @@ async def send_gemini_response(update: Update, prompt: str) -> None:
         {prompt}"""
         
         response = model.generate_content(full_prompt)
+        print(f"Gemini response: {response.text}")
         
         await update.message.reply_text(f"{response.text}")
         

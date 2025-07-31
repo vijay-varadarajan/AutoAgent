@@ -184,6 +184,7 @@ async def conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             return
         
     else:
+        print("Sending Gemini response...")
         await send_gemini_response(update, prompt)
         return
 
