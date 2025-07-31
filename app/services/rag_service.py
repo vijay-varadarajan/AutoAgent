@@ -107,6 +107,7 @@ class RAGService:
             )
             all_splits = text_splitter.split_documents(all_docs)
             
+            print(f"Total documents after splitting: {len(all_splits)}")
             # Filter chunks
             filtered_splits = [
                 split for split in all_splits
@@ -129,6 +130,7 @@ class RAGService:
             if failed_urls:
                 success_msg += f"\n⚠️ Failed to load {len(failed_urls)} URLs: {', '.join(failed_urls)}"
             
+            print(success_msg)
             return success_msg
         
         except Exception as e:
@@ -156,9 +158,12 @@ class RAGService:
             [retrieve], 
             checkpointer=self.memory
         )
+        
+        print(f"Initialized RAG agent for user {user_id} with collection {self._get_collection_name(user_id)}")
     
     async def query(self, user_id: str, question: str) -> str:
         """Query the RAG system with a question for a specific user."""
+        print(f"Querying RAG for user {user_id}: {question}")
         if user_id not in self.user_agent_executors:
             return "RAG agent not initialized for this user. Please load a website first."
         
@@ -177,6 +182,7 @@ class RAGService:
                         if hasattr(last_msg, 'content'):
                             response_parts.append(last_msg.content)
 
+            print(f"RAG response for user {user_id}: {response_parts}")
             return response_parts[-1] if response_parts else "No response generated"
         
         except Exception as e:

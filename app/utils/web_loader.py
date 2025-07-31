@@ -270,7 +270,6 @@ def main():
     for doc in docs:
         doc.page_content = clean_content(doc.page_content)
 
-    assert len(docs) == 1
     print(f"Total characters after cleaning: {len(docs[0].page_content)}")
 
     text_splitter = RecursiveCharacterTextSplitter(

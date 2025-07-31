@@ -8,7 +8,6 @@ from app.services.rag_service import rag_service
 from app.services.rag_state import rag_state
 
 
-# Store for thinking messages (in production, use Redis or database)
 thinking_messages = {}
 
 async def send_thinking_message(update: Update, message: str) -> int:
@@ -83,6 +82,7 @@ async def rag_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             # Load the website into RAG for this specific user
             result = await rag_service.load_website(user_id, urls)
             
+            print("Loaded website. Enabling RAG mode...")
             # Enable RAG mode for this user
             rag_state.enable_rag_for_user(user_id, urls)
             
@@ -157,10 +157,13 @@ async def conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     prompt = update.message.text.strip() if update.message and update.message.text else ""
     
+    print("Prompt:", prompt)
+    
     if not prompt:
         await update.message.reply_text("Please provide an action, e.g. 'Send email to <recipient> with subject <subject> and body <body>'.")
         return
     
+    print(f"Prompt: {prompt}, is rag enabled: {rag_state.is_rag_enabled(user_id)}")
     
     # CHECK: If RAG is enabled for this user, route to RAG service
     if rag_state.is_rag_enabled(user_id):
@@ -169,7 +172,9 @@ async def conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             thinking_msg = await update.message.reply_text("🤔 _Searching your website content..._", parse_mode='Markdown')
             
             # Query RAG service with user_id
+            print(f"1_Querying RAG for user {user_id}: {prompt}")
             rag_response = await rag_service.query(user_id, prompt)
+            print("Rag response", rag_response)
             
             # Delete thinking message and send response
             await thinking_msg.delete()
