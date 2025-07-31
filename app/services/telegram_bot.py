@@ -1,5 +1,4 @@
-from urllib.parse import urlencode
-
+from app.services.gemini_responder import send_gemini_response
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
@@ -167,13 +166,11 @@ async def conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     # CHECK: If RAG is enabled for this user, route to RAG service
     if rag_state.is_rag_enabled(user_id):
-        print(f"RAG mode enabled for user {user_id}. Processing query...")
         try:
             # Send thinking message
             thinking_msg = await update.message.reply_text("🤔 _Searching your website content..._", parse_mode='Markdown')
             
             # Query RAG service with user_id
-            print(f"1_Querying RAG for user {user_id}: {prompt}")
             rag_response = await rag_service.query(user_id, prompt)
             print("Rag response", rag_response)
             
@@ -183,12 +180,11 @@ async def conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             return
             
         except Exception as e:
-            await update.message.reply_text(f"❌ RAG query failed: {str(e)}")
+            print(f"📱 TELEGRAM BOT: ❌ Error processing RAG query: {e}")
             return
         
     else:
-        print(f"RAG mode not enabled for user {user_id}. Processing as normal conversation...")
-        await update.message.reply_text(f"Not in RAG Mode.")
+        await send_gemini_response(update, prompt)
         return
 
 
