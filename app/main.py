@@ -25,6 +25,7 @@ async def startup_event():
         telegram_app.add_handler(CommandHandler("start", start_command))
         telegram_app.add_handler(CommandHandler("help", help_command))
         telegram_app.add_handler(CommandHandler("rag", rag_command))
+        telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, conversation))
         
         # IMPORTANT: Initialize the application
         await telegram_app.initialize()

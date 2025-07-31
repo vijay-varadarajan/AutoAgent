@@ -167,6 +167,7 @@ async def conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     # CHECK: If RAG is enabled for this user, route to RAG service
     if rag_state.is_rag_enabled(user_id):
+        print(f"RAG mode enabled for user {user_id}. Processing query...")
         try:
             # Send thinking message
             thinking_msg = await update.message.reply_text("🤔 _Searching your website content..._", parse_mode='Markdown')
@@ -186,6 +187,7 @@ async def conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             return
         
     else:
+        print(f"RAG mode not enabled for user {user_id}. Processing as normal conversation...")
         await update.message.reply_text(f"Not in RAG Mode.")
         return
 
