@@ -7,9 +7,9 @@ dotenv.load_dotenv()
 
 
 async def setup_webhook():
-    bot_token = os.getenv("TELEGRAM_BOT_API_KEY")  # Replace with actual token
-    webhook_url = os.getenv("WEBHOOK_URL")  # Replace with actual URL
-
+    bot_token = os.getenv("TELEGRAM_BOT_API_KEY")
+    webhook_url = os.getenv("WEBHOOK_URL")  
+    
     bot = Bot(token=bot_token)
     
     try:

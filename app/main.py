@@ -1,14 +1,10 @@
 from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 from telegram.ext import Application
-import asyncio
 import os
-from app.routes import workflow, oauth_redirect
 from app.services.telegram_bot import *
 from app.config import TELEGRAM_BOT_API_KEY
-import logging
 
-logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AutoAgent API")
 
@@ -29,15 +25,13 @@ async def startup_event():
         telegram_app.add_handler(CommandHandler("start", start_command))
         telegram_app.add_handler(CommandHandler("help", help_command))
         telegram_app.add_handler(CommandHandler("rag", rag_command))
-        telegram_app.add_handler(CommandHandler("connect", connect))
-        telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, do_command))
         
         # IMPORTANT: Initialize the application
         await telegram_app.initialize()
         
-        logger.info("Telegram bot initialized successfully")
+        print("Telegram bot initialized successfully")
     else:
-        logger.warning("TELEGRAM_BOT_API_KEY not found - Telegram webhook disabled")
+        print("TELEGRAM_BOT_API_KEY not found - Telegram webhook disabled")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -46,7 +40,7 @@ async def shutdown_event():
     
     if telegram_app:
         await telegram_app.shutdown()
-        logger.info("Telegram bot shutdown complete")
+        print("Telegram bot shutdown complete")
 
 @app.post("/webhook/telegram")
 async def telegram_webhook(request: Request):
@@ -66,12 +60,8 @@ async def telegram_webhook(request: Request):
         
         return {"status": "ok"}
     except Exception as e:
-        logger.error(f"Error processing Telegram webhook: {e}")
+        print(f"Error processing Telegram webhook: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-# Include existing routes
-app.include_router(workflow.router, prefix="/api/workflow", tags=["workflow"])
-app.include_router(oauth_redirect.router, prefix="/api", tags=["oauth"])
 
 @app.get("/")
 async def root():
@@ -81,16 +71,9 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-@app.get("/debug")
-async def debug():
-    return {
-        "port": os.environ.get("PORT", "not set"),
-        "python_path": os.getcwd(),
-        "env_vars": {k: v for k, v in os.environ.items() if not k.startswith("SECRET")}
-    }
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8080))
-    logger.info(f"Starting server on port {port}")
+    print(f"Starting server on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
