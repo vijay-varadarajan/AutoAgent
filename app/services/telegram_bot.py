@@ -106,7 +106,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     username = update.effective_user.username or update.effective_user.first_name or "User"
     
     welcome_message = f"""
-🤖 **Welcome to AutoAgent, {username}!**
+🤖 **Welcome to RAGAgent, {username}!**
 
 I'm your intelligent RAG agent that can:
 • 📧 Converse with you
@@ -124,7 +124,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """Handle /help command - detailed functionality overview."""
 
     help_message = """
-🤖 **AutoAgent - Complete Feature Guide**
+🤖 **RAGAgent - Complete Feature Guide**
 
 **🔗 Smart Website RAG (Retrieval-Augmented Generation)**
 • Load any website: `/rag https://example.com`
@@ -141,7 +141,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • `/start` - Welcome message
 • `/help` - This detailed guide
 • `/rag <url>` - Enable website Q&A mode
-• `[No command] <conversation>` - Start a conversation with AutoAgent
+• `[No command] <conversation>` - Start a conversation with RAGAgent
 """
     
     await update.message.reply_text(help_message, parse_mode='Markdown')
