@@ -61,7 +61,7 @@ async def rag_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 # Clear user's RAG data and disable
                 rag_service.clear_user_data(user_id)
                 rag_state.disable_rag_for_user(user_id)
-                await update.message.reply_text("🔴 RAG mode disabled. Your data has been cleared. Back to normal AutoAgent mode.")
+                await update.message.reply_text("🔴 RAG mode disabled. Your data has been cleared. Back to normal RAGAgent mode.")
             else:
                 await update.message.reply_text("Please provide a URL: `/rag https://example.com`")
             return

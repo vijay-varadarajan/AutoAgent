@@ -6,7 +6,7 @@ from app.services.telegram_bot import *
 from app.config import TELEGRAM_BOT_API_KEY
 
 
-app = FastAPI(title="AutoAgent API")
+app = FastAPI(title="RAGAgent API")
 
 # Initialize Telegram bot application
 telegram_app = None
@@ -66,7 +66,7 @@ async def telegram_webhook(request: Request):
 
 @app.get("/")
 async def root():
-    return {"message": "AutoAgent API is running"}
+    return {"message": "RAGAgent API is running"}
 
 @app.get("/health")
 async def health_check():

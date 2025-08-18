@@ -298,7 +298,7 @@ def main():
     print(f"Indexed {len(document_ids)} documents")
 
     custom_prompt = ChatPromptTemplate.from_template("""
-You are an expert AI assistant specializing in answering questions about AI agents, LLMs, and related topics.
+You are RAGAgent, an expert AI assistant specializing in answering questions about AI agents, LLMs, and related topics.
 
 Context Information:
 {context}
