@@ -1,6 +1,6 @@
-# AutoAgent - An Auto-training RAG Agent
+# RAGAgent - An Auto-training RAG Agent
 
-AutoAgent is a Telegram bot that automatically trains on user-provided websites to provide intelligent responses using the Gemini model. It supports Retrieval-Augmented Generation (RAG) workflows, allowing users to interact with their own content seamlessly.
+RAGAgent is a Telegram bot that automatically trains on user-provided websites to provide intelligent responses using the Gemini model. It supports Retrieval-Augmented Generation (RAG) workflows, allowing users to interact with their own content seamlessly.
 
 ## 🛠️ Features
 - **RAG Mode**: Automatically trains on user-provided websites.
@@ -11,7 +11,7 @@ AutoAgent is a Telegram bot that automatically trains on user-provided websites 
 - **Error Handling**: Robust error handling for smooth operation.
 
 ## 🔗 Bot Link
-[https://t.me/autoagentv0_bot](https://t.me/autoagentv0_bot)
+[BOT](https://t.me/autoagentv0_bot)
 
 ## 🚀 Usage
 - Start the bot with `/start`.
