@@ -11,7 +11,7 @@ RAGAgent is a Telegram bot that automatically trains on user-provided websites t
 - **Error Handling**: Robust error handling for smooth operation.
 
 ## 🔗 Bot Link
-[BOT](https://t.me/autoagentv0_bot)
+[TELEGRAM-BOT](https://t.me/autoagentv0_bot)
 
 ## 🚀 Usage
 - Start the bot with `/start`.
@@ -20,6 +20,8 @@ RAGAgent is a Telegram bot that automatically trains on user-provided websites t
 - Disable RAG mode with `/rag`.
 - Use `/help` for assistance.
 - Chat with the bot in normal mode.
+
+\[The accuracy of RAGAgent's responses may vary based on the quality and relevance of the provided website content.\]
 
 ## Tech Stack
 - **Python**: Main programming language.

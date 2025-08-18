@@ -115,6 +115,8 @@ I'm your intelligent RAG agent that can:
 Send `/help` to see all available commands and features.
 
 **Quick start:** Try saying "/rag https://example.com" to load a website and ask questions about it!
+
+[Accuracy of RAGAgent's responses may vary based on the quality and relevance of the provided website content.]
 """
     
     await update.message.reply_text(welcome_message, parse_mode='Markdown')
@@ -142,6 +144,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • `/help` - This detailed guide
 • `/rag <url>` - Enable website Q&A mode
 • `[No command] <conversation>` - Start a conversation with RAGAgent
+
+[Accuracy of RAGAgent's responses may vary based on the quality and relevance of the provided website content.]
 """
     
     await update.message.reply_text(help_message, parse_mode='Markdown')
